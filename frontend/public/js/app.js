@@ -62,6 +62,8 @@ function setAuth(token, user) {
   localStorage.setItem("healthiq_token", token);
   localStorage.setItem("healthiq_user", JSON.stringify(user));
   $("user-label").textContent = user.name;
+  $("chip-name").textContent = user.name;
+  $("user-avatar").textContent = (user.name || "?").trim().charAt(0).toUpperCase();
 }
 
 function showView(name) {
@@ -461,15 +463,18 @@ function closeProfile() {
   $("profile-error").textContent = "";
 }
 
+function openProfile() {
+  $("p-name").value = state.user?.name || "";
+  $("p-email").value = state.user?.email || "";
+  $("p-current").value = "";
+  $("p-new").value = "";
+  $("profile-error").textContent = "";
+  $("profile-modal").classList.remove("hidden");
+}
+
 function initProfile() {
-  $("profile-btn").addEventListener("click", () => {
-    $("p-name").value = state.user?.name || "";
-    $("p-email").value = state.user?.email || "";
-    $("p-current").value = "";
-    $("p-new").value = "";
-    $("profile-error").textContent = "";
-    $("profile-modal").classList.remove("hidden");
-  });
+  $("profile-btn").addEventListener("click", openProfile);
+  $("user-chip").addEventListener("click", openProfile);
   $("profile-close").addEventListener("click", closeProfile);
   $("profile-cancel").addEventListener("click", closeProfile);
   $("profile-modal").addEventListener("click", (e) => {
@@ -490,6 +495,8 @@ function initProfile() {
       state.user = data.user;
       localStorage.setItem("healthiq_user", JSON.stringify(data.user));
       $("user-label").textContent = data.user.name;
+      $("chip-name").textContent = data.user.name;
+      $("user-avatar").textContent = (data.user.name || "?").trim().charAt(0).toUpperCase();
       toast("Perfil actualizado");
       closeProfile();
     } catch (err) {
@@ -498,37 +505,11 @@ function initProfile() {
   });
 }
 
-/* ---------------- Exportar CSV ---------------- */
-
-async function downloadCSV() {
-  try {
-    const res = await fetch(`${API_BASE}/records/export`, {
-      headers: { Authorization: `Bearer ${state.token}` },
-    });
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      toast(j.message || "Error al exportar");
-      return;
-    }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "healthiq_records.csv";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    toast(err.message);
-  }
-}
-
 /* ---------------- Tema claro / oscuro ---------------- */
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  $("theme-btn").textContent = theme === "dark" ? "Tema claro" : "Tema oscuro";
+  $("theme-label").textContent = theme === "dark" ? "Tema claro" : "Tema oscuro";
 }
 
 function initTheme() {
@@ -541,6 +522,43 @@ function initTheme() {
     resetCharts();
     loadDashboard().catch(() => {});
   });
+}
+
+/* ---------------- Navegacion por secciones ---------------- */
+
+function switchSection(name) {
+  document.querySelectorAll(".section").forEach((s) => s.classList.remove("active"));
+  const el = $("section-" + name);
+  if (el) el.classList.add("active");
+  document.querySelectorAll(".nav-item[data-nav]").forEach((b) =>
+    b.classList.toggle("active", b.dataset.nav === name)
+  );
+  const titles = {
+    dashboard: "Inicio",
+    record: "Registrar",
+    history: "Historial",
+    goal: "Meta",
+  };
+  $("page-title").textContent = titles[name] || "Inicio";
+  closeSidebar();
+}
+
+function openSidebar() {
+  $("sidebar").classList.add("open");
+  $("side-backdrop").classList.add("show");
+}
+
+function closeSidebar() {
+  $("sidebar").classList.remove("open");
+  $("side-backdrop").classList.remove("show");
+}
+
+function initNav() {
+  document.querySelectorAll(".nav-item[data-nav]").forEach((btn) =>
+    btn.addEventListener("click", () => switchSection(btn.dataset.nav))
+  );
+  $("menu-btn").addEventListener("click", openSidebar);
+  $("side-backdrop").addEventListener("click", closeSidebar);
 }
 
 /* ---------------- WebSocket en tiempo real ---------------- */
@@ -605,10 +623,10 @@ function bootstrap() {
   initGoalForm();
   initProfile();
   initTheme();
+  initNav();
   initCharts();
-  $("export-btn").addEventListener("click", downloadCSV);
   if (state.token && state.user) {
-    $("user-label").textContent = state.user.name;
+    setAuth(state.token, state.user);
     showView("dash");
     connectWs();
     Promise.all([loadDashboard(), loadHistory()]).catch(() => {

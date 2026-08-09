@@ -4,188 +4,301 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HealthIQ · Plataforma de Salud con IA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
+  <div class="aurora" aria-hidden="true">
+    <span class="orb orb-1"></span>
+    <span class="orb orb-2"></span>
+    <span class="orb orb-3"></span>
+  </div>
+
   <!-- Vista de autenticacion -->
   <section id="auth-view" class="auth-view hidden">
-    <div class="auth-card">
-      <div class="brand">
-        <div class="brand-logo">H</div>
+    <div class="auth-shell">
+      <div class="auth-brand">
+        <div class="brand-logo lg">H</div>
         <h1>Health<span>IQ</span></h1>
-        <p>Plataforma de salud con inteligencia artificial</p>
+        <p class="tagline">Tu salud, analizada por inteligencia artificial en tiempo real.</p>
+        <ul class="feature-list">
+          <li>
+            <span class="feat-ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg>
+            </span>
+            Prediccion de tendencia de peso y IMC
+          </li>
+          <li>
+            <span class="feat-ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 6.5L21 9l-5 4 1.5 7L12 17l-5.5 3L8 13 3 9l6.5-.5z"/></svg>
+            </span>
+            Recomendaciones personalizadas
+          </li>
+          <li>
+            <span class="feat-ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            </span>
+            Metas de peso y progreso continuo
+          </li>
+        </ul>
+        <div class="demo-hint">
+          <span class="pulse-dot"></span>
+          Prueba la demo: <code>demo@healthiq.app</code> / <code>demo1234</code>
+        </div>
       </div>
-      <div class="tabs">
-        <button class="tab active" data-tab="login">Iniciar sesion</button>
-        <button class="tab" data-tab="register">Crear cuenta</button>
+      <div class="auth-form-wrap">
+        <div class="auth-card">
+          <div class="tabs">
+            <button class="tab active" data-tab="login">Iniciar sesion</button>
+            <button class="tab" data-tab="register">Crear cuenta</button>
+          </div>
+          <form id="auth-form">
+            <div class="field" id="fld-name">
+              <label for="name">Nombre</label>
+              <input type="text" id="name" placeholder="Tu nombre" required />
+            </div>
+            <div class="field">
+              <label for="email">Email</label>
+              <input type="email" id="email" placeholder="tu@correo.com" required />
+            </div>
+            <div class="field">
+              <label for="password">Contrasena</label>
+              <input type="password" id="password" placeholder="Minimo 8 caracteres" required minlength="8" />
+            </div>
+            <button type="submit" class="btn-primary" id="auth-submit">Ingresar</button>
+            <p id="auth-error" class="error-msg"></p>
+          </form>
+        </div>
       </div>
-      <form id="auth-form">
-        <div class="field" id="fld-name">
-          <label for="name">Nombre</label>
-          <input type="text" id="name" placeholder="Tu nombre" required />
-        </div>
-        <div class="field">
-          <label for="email">Email</label>
-          <input type="email" id="email" placeholder="tu@correo.com" required />
-        </div>
-        <div class="field">
-          <label for="password">Contrasena</label>
-          <input type="password" id="password" placeholder="Minimo 8 caracteres" required minlength="8" />
-        </div>
-        <button type="submit" class="btn-primary" id="auth-submit">Ingresar</button>
-        <p id="auth-error" class="error-msg"></p>
-      </form>
     </div>
   </section>
 
   <!-- Vista del dashboard -->
   <section id="dash-view" class="dash-view hidden">
-    <header class="topbar">
-      <div class="brand small">
+    <aside class="sidebar" id="sidebar">
+      <div class="side-brand">
         <div class="brand-logo">H</div>
-        <h1>Health<span>IQ</span></h1>
+        <h2>Health<span>IQ</span></h2>
       </div>
-      <div class="top-actions">
-        <span id="ws-badge" class="ws-badge offline">SIN CONEXION</span>
-        <span id="user-label" class="user-label"></span>
-        <button id="export-btn" class="btn-ghost">Exportar CSV</button>
-        <button id="profile-btn" class="btn-ghost">Perfil</button>
-        <button id="theme-btn" class="btn-ghost">Tema claro</button>
-        <button id="logout-btn" class="btn-ghost">Salir</button>
+      <nav class="side-nav">
+        <button class="nav-item active" data-nav="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+          <span>Inicio</span>
+        </button>
+        <button class="nav-item" data-nav="record">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span>Registrar</span>
+        </button>
+        <button class="nav-item" data-nav="history">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg>
+          <span>Historial</span>
+        </button>
+        <button class="nav-item" data-nav="goal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+          <span>Meta</span>
+        </button>
+      </nav>
+      <div class="side-foot">
+        <button class="nav-item foot" id="profile-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Perfil</span>
+        </button>
+        <button class="nav-item foot" id="theme-btn">
+          <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <span id="theme-label">Tema claro</span>
+        </button>
+        <button class="nav-item foot danger" id="logout-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Salir</span>
+        </button>
       </div>
-    </header>
+    </aside>
+    <div class="side-backdrop" id="side-backdrop"></div>
 
-    <main class="container">
-      <section class="hero">
-        <div>
-          <h2>Dashboard inteligente</h2>
-          <p>El motor de IA analiza tu historial, predice tu tendencia y te recomienda pasos concretos.</p>
+    <main class="main">
+      <header class="topbar">
+        <button id="menu-btn" class="icon-btn" aria-label="Menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+        </button>
+        <div class="page-title">
+          <h2 id="page-title">Inicio</h2>
+          <span class="greeting">Hola, <span id="user-label">--</span></span>
         </div>
-        <div class="ai-chip">
-          <span class="pulse-dot"></span> IA activa
+        <div class="top-actions">
+          <span id="ws-badge" class="ws-badge offline">SIN CONEXION</span>
+          <button class="user-chip" id="user-chip">
+            <span class="avatar" id="user-avatar">?</span>
+            <span class="chip-name" id="chip-name">--</span>
+          </button>
         </div>
-      </section>
+      </header>
 
-      <section class="metrics">
-        <div class="metric-card">
-          <span class="metric-label">IMC actual</span>
-          <span class="metric-value" id="m-bmi">--</span>
-          <span class="metric-sub" id="m-bmi-cat">Sin datos</span>
-        </div>
-        <div class="metric-card">
-          <span class="metric-label">Peso actual</span>
-          <span class="metric-value" id="m-weight">--</span>
-          <span class="metric-sub">kg</span>
-        </div>
-        <div class="metric-card">
-          <span class="metric-label">Tendencia</span>
-          <span class="metric-value" id="m-trend">--</span>
-          <span class="metric-sub" id="m-trend-sub">kg/mes</span>
-        </div>
-        <div class="metric-card accent">
-          <span class="metric-label">IMC proyectado</span>
-          <span class="metric-value" id="m-bmi30">--</span>
-          <span class="metric-sub">en 30 dias (IA)</span>
-        </div>
-      </section>
-
-      <section class="panel goal-panel">
-        <div class="goal-head">
-          <div>
-            <h3>Meta de peso</h3>
-            <p class="sub">Define tu peso objetivo y sigue tu progreso.</p>
+      <div class="container">
+        <!-- Inicio -->
+        <section class="section active" id="section-dashboard">
+          <div class="hero">
+            <div>
+              <span class="eyebrow">Panel inteligente</span>
+              <h3>Tu salud en una mirada</h3>
+              <p>La IA analiza tu historial, proyecta tu tendencia y te da pasos concretos.</p>
+            </div>
+            <div class="ai-chip">
+              <span class="pulse-dot"></span> IA activa
+            </div>
           </div>
-          <form id="goal-form" class="goal-form">
-            <input type="number" id="goal-weight" step="0.1" min="1" max="600" placeholder="70" />
-            <button type="submit" class="btn-primary sm">Guardar meta</button>
-          </form>
-        </div>
-        <div id="goal-status" class="goal-status">
-          <p class="placeholder">Define una meta de peso para ver tu progreso.</p>
-        </div>
-      </section>
 
-      <section class="grid-2">
-        <div class="panel">
-          <h3>Evolucion del peso y prediccion</h3>
-          <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
-        </div>
-        <div class="panel">
-          <h3>Evolucion del IMC y proyeccion</h3>
-          <div class="chart-wrap"><canvas id="bmi-chart"></canvas></div>
-        </div>
-      </section>
+          <div class="metrics">
+            <div class="metric-card">
+              <div class="metric-top"><span class="metric-ico c-cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4c0 .8-.2 1.5-.6 2.1C17.4 9.5 18 11 18 12.5a6 6 0 0 1-12 0C6 11 6.6 9.5 8.6 8.1A4 4 0 0 1 8 6a4 4 0 0 1 4-4z"/></svg></span><span class="metric-label">IMC actual</span></div>
+              <span class="metric-value" id="m-bmi">--</span>
+              <span class="metric-sub" id="m-bmi-cat">Sin datos</span>
+            </div>
+            <div class="metric-card">
+              <div class="metric-top"><span class="metric-ico c-violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.3-9.3-9.2A5.2 5.2 0 0 1 12 6.6a5.2 5.2 0 0 1 9.3 5.2C19 15.7 12 21 12 21z"/></svg></span><span class="metric-label">Peso actual</span></div>
+              <span class="metric-value" id="m-weight">--</span>
+              <span class="metric-sub">kg</span>
+            </div>
+            <div class="metric-card">
+              <div class="metric-top"><span class="metric-ico c-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg></span><span class="metric-label">Tendencia</span></div>
+              <span class="metric-value" id="m-trend">--</span>
+              <span class="metric-sub" id="m-trend-sub">kg/mes</span>
+            </div>
+            <div class="metric-card accent">
+              <div class="metric-top"><span class="metric-ico c-pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 12h14"/></svg></span><span class="metric-label">IMC proyectado</span></div>
+              <span class="metric-value" id="m-bmi30">--</span>
+              <span class="metric-sub">en 30 dias (IA)</span>
+            </div>
+          </div>
 
-      <section class="grid-2">
-        <div class="panel">
-          <h3>Registrar medicion</h3>
-          <form id="record-form" class="record-form">
-            <div class="row">
-              <div class="field">
-                <label for="r-weight">Peso (kg)</label>
-                <input type="number" id="r-weight" step="0.1" min="1" max="600" placeholder="70.5" required />
+          <div class="grid-2">
+            <div class="panel">
+              <h4>Evolucion del peso y prediccion</h4>
+              <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
+            </div>
+            <div class="panel">
+              <h4>Evolucion del IMC y proyeccion</h4>
+              <div class="chart-wrap"><canvas id="bmi-chart"></canvas></div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="panel">
+              <h4>Recomendaciones inteligentes</h4>
+              <div id="recommendations" class="recommendations">
+                <p class="placeholder">Registra tu primera medicion para recibir recomendaciones personalizadas.</p>
+              </div>
+            </div>
+            <div class="panel">
+              <h4>Confianza del modelo</h4>
+              <div id="model-info" class="model-info">
+                <p class="placeholder">El modelo aprende con cada registro.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Registrar -->
+        <section class="section" id="section-record">
+          <div class="hero">
+            <div>
+              <span class="eyebrow">Nueva medicion</span>
+              <h3>Registra tu peso</h3>
+              <p>Cada medicion alimenta tu modelo de IA y mejora las predicciones.</p>
+            </div>
+          </div>
+          <div class="panel form-panel">
+            <form id="record-form" class="record-form">
+              <div class="row">
+                <div class="field">
+                  <label for="r-weight">Peso (kg)</label>
+                  <input type="number" id="r-weight" step="0.1" min="1" max="600" placeholder="70.5" required />
+                </div>
+                <div class="field">
+                  <label for="r-height">Altura (cm)</label>
+                  <input type="number" id="r-height" step="0.1" min="1" max="300" placeholder="170" required />
+                </div>
               </div>
               <div class="field">
-                <label for="r-height">Altura (cm)</label>
-                <input type="number" id="r-height" step="0.1" min="1" max="300" placeholder="170" required />
+                <label for="r-activity">Nivel de actividad</label>
+                <select id="r-activity">
+                  <option value="1">1 - Sedentario</option>
+                  <option value="2">2 - Poco activo</option>
+                  <option value="3" selected>3 - Moderado</option>
+                  <option value="4">4 - Activo</option>
+                  <option value="5">5 - Muy activo</option>
+                </select>
               </div>
-            </div>
-            <div class="field">
-              <label for="r-activity">Nivel de actividad</label>
-              <select id="r-activity">
-                <option value="1">1 - Sedentario</option>
-                <option value="2">2 - Poco activo</option>
-                <option value="3" selected>3 - Moderado</option>
-                <option value="4">4 - Activo</option>
-                <option value="5">5 - Muy activo</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="r-note">Nota (opcional)</label>
-              <input type="text" id="r-note" placeholder="Ej. rutina de ejercicios" />
-            </div>
-            <button type="submit" class="btn-primary" id="record-submit">Guardar y analizar</button>
-            <button type="button" class="btn-ghost hidden" id="record-cancel">Cancelar edicion</button>
-          </form>
-          <div id="record-result" class="record-result"></div>
-        </div>
-        <div class="panel">
-          <h3>Historial</h3>
-          <div class="hist-wrap">
-            <table class="hist-table">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Peso</th>
-                  <th>IMC</th>
-                  <th>Act.</th>
-                  <th>Nota</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="history-body">
-                <tr><td colspan="6" class="placeholder hist-empty">Sin registros todavia.</td></tr>
-              </tbody>
-            </table>
+              <div class="field">
+                <label for="r-note">Nota (opcional)</label>
+                <input type="text" id="r-note" placeholder="Ej. rutina de ejercicios" />
+              </div>
+              <button type="submit" class="btn-primary" id="record-submit">Guardar y analizar</button>
+              <button type="button" class="btn-ghost hidden" id="record-cancel">Cancelar edicion</button>
+            </form>
+            <div id="record-result" class="record-result"></div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section class="grid-2">
-        <div class="panel">
-          <h3>Recomendaciones inteligentes</h3>
-          <div id="recommendations" class="recommendations">
-            <p class="placeholder">Registra tu primera medicion para recibir recomendaciones personalizadas.</p>
+        <!-- Historial -->
+        <section class="section" id="section-history">
+          <div class="hero">
+            <div>
+              <span class="eyebrow">Historial</span>
+              <h3>Tu linea de tiempo</h3>
+              <p>Edita o elimina mediciones: la IA se reentrena automaticamente.</p>
+            </div>
           </div>
-        </div>
-        <div class="panel">
-          <h3>Confianza del modelo</h3>
-          <div id="model-info" class="model-info">
-            <p class="placeholder">El modelo aprende con cada registro.</p>
+          <div class="panel">
+            <div class="hist-wrap">
+              <table class="hist-table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Peso</th>
+                    <th>IMC</th>
+                    <th>Act.</th>
+                    <th>Nota</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="history-body">
+                  <tr><td colspan="6" class="placeholder hist-empty">Sin registros todavia.</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        <!-- Meta -->
+        <section class="section" id="section-goal">
+          <div class="hero">
+            <div>
+              <span class="eyebrow">Meta de peso</span>
+              <h3>Define tu objetivo</h3>
+              <p>Fija un peso objetivo y sigue tu avance semana a semana.</p>
+            </div>
+          </div>
+          <div class="panel goal-panel">
+            <div class="goal-head">
+              <div>
+                <h4>Mi objetivo</h4>
+                <p class="sub">Ingresa tu peso objetivo en kg.</p>
+              </div>
+              <form id="goal-form" class="goal-form">
+                <input type="number" id="goal-weight" step="0.1" min="1" max="600" placeholder="70" />
+                <button type="submit" class="btn-primary sm">Guardar meta</button>
+              </form>
+            </div>
+            <div id="goal-status" class="goal-status">
+              <p class="placeholder">Define una meta de peso para ver tu progreso.</p>
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
 
     <div id="toast" class="toast hidden"></div>
