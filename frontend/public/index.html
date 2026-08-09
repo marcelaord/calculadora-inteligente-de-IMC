@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HealthIQ · Plataforma de Salud con IA</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Vista de autenticacion -->
+  <section id="auth-view" class="auth-view hidden">
+    <div class="auth-card">
+      <div class="brand">
+        <div class="brand-logo">H</div>
+        <h1>Health<span>IQ</span></h1>
+        <p>Plataforma de salud con inteligencia artificial</p>
+      </div>
+      <div class="tabs">
+        <button class="tab active" data-tab="login">Iniciar sesion</button>
+        <button class="tab" data-tab="register">Crear cuenta</button>
+      </div>
+      <form id="auth-form">
+        <div class="field" id="fld-name">
+          <label for="name">Nombre</label>
+          <input type="text" id="name" placeholder="Tu nombre" required />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="tu@correo.com" required />
+        </div>
+        <div class="field">
+          <label for="password">Contrasena</label>
+          <input type="password" id="password" placeholder="Minimo 8 caracteres" required minlength="8" />
+        </div>
+        <button type="submit" class="btn-primary" id="auth-submit">Ingresar</button>
+        <p id="auth-error" class="error-msg"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- Vista del dashboard -->
+  <section id="dash-view" class="dash-view hidden">
+    <header class="topbar">
+      <div class="brand small">
+        <div class="brand-logo">H</div>
+        <h1>Health<span>IQ</span></h1>
+      </div>
+      <div class="top-actions">
+        <span id="ws-badge" class="ws-badge offline">SIN CONEXION</span>
+        <span id="user-label" class="user-label"></span>
+        <button id="logout-btn" class="btn-ghost">Salir</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <div>
+          <h2>Dashboard inteligente</h2>
+          <p>El motor de IA analiza tu historial, predice tu tendencia y te recomienda pasos concretos.</p>
+        </div>
+        <div class="ai-chip">
+          <span class="pulse-dot"></span> IA activa
+        </div>
+      </section>
+
+      <section class="metrics">
+        <div class="metric-card">
+          <span class="metric-label">IMC actual</span>
+          <span class="metric-value" id="m-bmi">--</span>
+          <span class="metric-sub" id="m-bmi-cat">Sin datos</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Peso actual</span>
+          <span class="metric-value" id="m-weight">--</span>
+          <span class="metric-sub">kg</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Tendencia</span>
+          <span class="metric-value" id="m-trend">--</span>
+          <span class="metric-sub" id="m-trend-sub">kg/mes</span>
+        </div>
+        <div class="metric-card accent">
+          <span class="metric-label">IMC proyectado</span>
+          <span class="metric-value" id="m-bmi30">--</span>
+          <span class="metric-sub">en 30 dias (IA)</span>
+        </div>
+      </section>
+
+      <section class="grid-2">
+        <div class="panel">
+          <h3>Evolucion del peso y prediccion</h3>
+          <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
+        </div>
+        <div class="panel">
+          <h3>Registrar medicion</h3>
+          <form id="record-form" class="record-form">
+            <div class="row">
+              <div class="field">
+                <label for="r-weight">Peso (kg)</label>
+                <input type="number" id="r-weight" step="0.1" min="1" max="600" placeholder="70.5" required />
+              </div>
+              <div class="field">
+                <label for="r-height">Altura (cm)</label>
+                <input type="number" id="r-height" step="0.1" min="1" max="300" placeholder="170" required />
+              </div>
+            </div>
+            <div class="field">
+              <label for="r-activity">Nivel de actividad</label>
+              <select id="r-activity">
+                <option value="1">1 - Sedentario</option>
+                <option value="2">2 - Poco activo</option>
+                <option value="3" selected>3 - Moderado</option>
+                <option value="4">4 - Activo</option>
+                <option value="5">5 - Muy activo</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="r-note">Nota (opcional)</label>
+              <input type="text" id="r-note" placeholder="Ej. rutina de ejercicios" />
+            </div>
+            <button type="submit" class="btn-primary">Guardar y analizar</button>
+          </form>
+          <div id="record-result" class="record-result"></div>
+        </div>
+      </section>
+
+      <section class="grid-2">
+        <div class="panel">
+          <h3>Recomendaciones inteligentes</h3>
+          <div id="recommendations" class="recommendations">
+            <p class="placeholder">Registra tu primera medicion para recibir recomendaciones personalizadas.</p>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Confianza del modelo</h3>
+          <div id="model-info" class="model-info">
+            <p class="placeholder">El modelo aprende con cada registro.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast hidden"></div>
+  </section>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Variables de entorno con secretos (no subir a GitHub)
+.env
+
+# Construccion / binarios
+backend/build/
+build/
+*.o
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db

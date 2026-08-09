@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: healthiq-db
+    environment:
+      POSTGRES_USER: ${PGUSER:-healthiq}
+      POSTGRES_PASSWORD: ${PGPASSWORD:-healthiq}
+      POSTGRES_DB: ${PGDATABASE:-healthiq}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER:-healthiq} -d ${PGDATABASE:-healthiq}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  backend:
+    build: ./backend
+    container_name: healthiq-backend
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGDATABASE: ${PGDATABASE:-healthiq}
+      PGUSER: ${PGUSER:-healthiq}
+      PGPASSWORD: ${PGPASSWORD:-healthiq}
+      JWT_SECRET: ${JWT_SECRET:-cambia-este-secreto-en-produccion}
+      JWT_TTL_SECONDS: ${JWT_TTL_SECONDS:-86400}
+      HEALTHIQ_THREADS: ${HEALTHIQ_THREADS:-4}
+      HEALTHIQ_LOG_LEVEL: ${HEALTHIQ_LOG_LEVEL:-info}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+
+  frontend:
+    build: ./frontend
+    container_name: healthiq-frontend
+    environment:
+      BACKEND_PROXY: ${BACKEND_PROXY:-http://backend:8080}
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+
+volumes:
+  pgdata:
