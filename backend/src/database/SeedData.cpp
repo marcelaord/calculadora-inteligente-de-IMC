@@ -76,6 +76,69 @@ std::string formatIsoUtc(int64_t epochSeconds) {
     return oss.str();
 }
 
+// Inserta o actualiza el modelo de IA del usuario (upsert idempotente).
+void saveModel(drogon::orm::DbClientPtr db, int64_t userId,
+               const ai::ModelState& model) {
+    db->execSqlSync(
+        "INSERT INTO ai_models(user_id, slope, intercept, sample_count, "
+        "last_weight, last_height, last_bmi, t_start, sum_x, sum_y, "
+        "sum_xx, sum_xy, last_updated) "
+        "VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now()) "
+        "ON CONFLICT (user_id) DO UPDATE SET "
+        "slope = EXCLUDED.slope, "
+        "intercept = EXCLUDED.intercept, "
+        "sample_count = EXCLUDED.sample_count, "
+        "last_weight = EXCLUDED.last_weight, "
+        "last_height = EXCLUDED.last_height, "
+        "last_bmi = EXCLUDED.last_bmi, "
+        "t_start = EXCLUDED.t_start, "
+        "sum_x = EXCLUDED.sum_x, "
+        "sum_y = EXCLUDED.sum_y, "
+        "sum_xx = EXCLUDED.sum_xx, "
+        "sum_xy = EXCLUDED.sum_xy, "
+        "last_updated = now()",
+        userId, model.slope, model.intercept, model.sampleCount,
+        model.lastWeight, model.lastHeight, model.lastBmi, model.tStart,
+        model.sumX, model.sumY, model.sumXX, model.sumXY);
+}
+
+// Entrena el modelo con el historial demo en orden cronologico.
+ai::ModelState trainDemoModel(int64_t userId) {
+    ai::ModelState model;
+    model.userId = userId;
+    for (const auto& p : demoPoints()) {
+        const auto bmi = core::BmiCalculator::calculate(p.weightKg, kDemoHeightCm);
+        const int64_t createdAt = epochSecondsDaysAgo(p.daysAgo);
+        model = ai::Predictor::learn(std::move(model), p.weightKg, kDemoHeightCm,
+                                     epochDays(createdAt));
+        model.lastBmi = bmi.bmi;
+    }
+    return model;
+}
+
+// Repara registros demo creados por el seed viejo con created_at en epoch 0
+// (1970). Corrige la fecha segun el peso y reentrena el modelo para que
+// quede consistente.
+void repairDemoDates(drogon::orm::DbClientPtr db, int64_t userId) {
+    const auto& points = demoPoints();
+    int repaired = 0;
+    for (const auto& p : points) {
+        auto res = db->execSqlSync(
+            "UPDATE health_records SET created_at = $3::timestamptz "
+            "WHERE user_id = $1 AND weight_kg::float8 = $2 "
+            "AND EXTRACT(EPOCH FROM created_at) = 0",
+            userId, p.weightKg, formatIsoUtc(epochSecondsDaysAgo(p.daysAgo)));
+        repaired += res.affectedRows();
+    }
+    if (repaired > 0) {
+        saveModel(db, userId, trainDemoModel(userId));
+        LOG_INFO << "Seed: reparadas " << repaired
+                 << " fechas del historial demo y modelo reentrenado.";
+    } else {
+        LOG_INFO << "Seed: historial demo ya tiene fechas correctas.";
+    }
+}
+
 }  // namespace
 
 void SeedData::run(drogon::orm::DbClientPtr db) {
@@ -84,7 +147,7 @@ void SeedData::run(drogon::orm::DbClientPtr db) {
             db->execSqlSync("SELECT id FROM users WHERE email = $1 LIMIT 1",
                             kDemoEmail);
         if (!existing.empty()) {
-            LOG_INFO << "Seed: usuario demo ya existe, omitiendo.";
+            repairDemoDates(db, existing[0]["id"].as<int64_t>());
             return;
         }
 
@@ -96,49 +159,21 @@ void SeedData::run(drogon::orm::DbClientPtr db) {
         const int64_t userId = ures[0]["id"].as<int64_t>();
 
         // Insertar historial y entrenar el modelo en orden cronologico.
-        ai::ModelState model;
-        model.userId = userId;
         const auto& points = demoPoints();
         for (const auto& p : points) {
             const auto bmi =
                 core::BmiCalculator::calculate(p.weightKg, kDemoHeightCm);
-            const int64_t createdAt = epochSecondsDaysAgo(p.daysAgo);
             db->execSqlSync(
                 "INSERT INTO health_records(user_id, weight_kg, height_cm, "
                 "bmi, activity_level, note, created_at) "
                 "VALUES($1, $2, $3, $4, $5, $6, $7::timestamptz)",
                 userId, p.weightKg, kDemoHeightCm, bmi.bmi, kDemoActivity,
-                p.note, formatIsoUtc(createdAt));
-
-            model = ai::Predictor::learn(std::move(model), p.weightKg,
-                                         kDemoHeightCm, epochDays(createdAt));
-            model.lastBmi = bmi.bmi;
+                p.note, formatIsoUtc(epochSecondsDaysAgo(p.daysAgo)));
         }
 
-        db->execSqlSync(
-            "INSERT INTO ai_models(user_id, slope, intercept, sample_count, "
-            "last_weight, last_height, last_bmi, t_start, sum_x, sum_y, "
-            "sum_xx, sum_xy, last_updated) "
-            "VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now()) "
-            "ON CONFLICT (user_id) DO UPDATE SET "
-            "slope = EXCLUDED.slope, "
-            "intercept = EXCLUDED.intercept, "
-            "sample_count = EXCLUDED.sample_count, "
-            "last_weight = EXCLUDED.last_weight, "
-            "last_height = EXCLUDED.last_height, "
-            "last_bmi = EXCLUDED.last_bmi, "
-            "t_start = EXCLUDED.t_start, "
-            "sum_x = EXCLUDED.sum_x, "
-            "sum_y = EXCLUDED.sum_y, "
-            "sum_xx = EXCLUDED.sum_xx, "
-            "sum_xy = EXCLUDED.sum_xy, "
-            "last_updated = now()",
-            userId, model.slope, model.intercept, model.sampleCount,
-            model.lastWeight, model.lastHeight, model.lastBmi, model.tStart,
-            model.sumX, model.sumY, model.sumXX, model.sumXY);
-
+        saveModel(db, userId, trainDemoModel(userId));
         LOG_INFO << "Seed: usuario demo creado (" << kDemoEmail << ") con "
-                 << model.sampleCount
+                 << static_cast<int>(points.size())
                  << " mediciones y modelo de IA entrenado.";
     } catch (const std::exception& e) {
         LOG_ERROR << "Seed: no se pudo cargar datos demo: " << e.what();
