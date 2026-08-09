@@ -7,6 +7,7 @@
 #include "AppServices.h"
 #include "api/middleware/JwtAuthFilter.h"
 #include "config/AppConfig.h"
+#include "database/SeedData.h"
 
 using namespace healthiq;
 
@@ -65,6 +66,9 @@ int main() {
         " password=" + cfg.pgPassword +
         " connect_timeout=10";
     AppServices::instance().initDb(connInfo, 8);
+
+    // Datos de demostracion (usuario demo + modelo IA entrenado) la primera vez.
+    database::SeedData::run(AppServices::instance().db().client());
 
     // Middleware JWT disponible para los controladores.
     app.registerFilter(std::make_shared<api::JwtAuthFilter>());

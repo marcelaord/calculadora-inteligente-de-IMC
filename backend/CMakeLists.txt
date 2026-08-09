@@ -26,6 +26,8 @@ add_executable(healthiq-backend
 
     src/database/Db.cpp
     src/database/Db.h
+    src/database/SeedData.cpp
+    src/database/SeedData.h
     src/database/UserRepository.cpp
     src/database/UserRepository.h
     src/database/HealthRecordRepository.cpp

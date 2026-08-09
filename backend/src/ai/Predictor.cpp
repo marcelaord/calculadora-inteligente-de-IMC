@@ -4,38 +4,21 @@
 
 namespace healthiq::ai {
 
-namespace {
-// Minimos cuadrados incrementales (recursive least squares).
-// Mantenemos sumas acumuladas: Sxx, Sxy, Sx, Sy, n.
-struct Accum {
-    double sumX = 0.0;
-    double sumY = 0.0;
-    double sumXX = 0.0;
-    double sumXY = 0.0;
-    double n = 0.0;
-};
-
-Accum accumFromModel(const ModelState& m) {
-    // Reconstruimos las sumas a partir de slope/intercept y el primer punto.
-    // Para 1 punto la recta pasa por el punto: slope=0.
-    // Para n puntos usamos las formulas cerradas asumiendo x centrado en tStart.
-    // t se mide como dias desde tStart (x=0,1,2,...) para estabilidad numerica.
-    Accum a;
-    a.n = static_cast<double>(m.sampleCount);
-    return a;
-}
-}  // namespace
-
 ModelState Predictor::learn(ModelState model,
                             double weightKg,
                             double heightCm,
                             int64_t nowEpochDays) {
-    // Convertimos a dias relativos al modelo para estabilidad numerica.
+    // Regresion lineal exacta en linea (minimos cuadrados recursivos).
+    // t se mide como dias desde tStart (x=0,1,2,...) para estabilidad numerica.
     if (model.sampleCount == 0 || model.tStart == 0) {
         model.tStart = nowEpochDays;
         model.sampleCount = 1;
-        model.intercept = weightKg;
+        model.sumX = 0.0;
+        model.sumY = weightKg;
+        model.sumXX = 0.0;
+        model.sumXY = 0.0;
         model.slope = 0.0;
+        model.intercept = weightKg;
         model.lastWeight = weightKg;
         model.lastHeight = heightCm;
         model.lastBmi = 0.0;
@@ -45,16 +28,19 @@ ModelState Predictor::learn(ModelState model,
     const double x = static_cast<double>(nowEpochDays - model.tStart);
     const double y = weightKg;
 
-    // Estimacion actual del modelo.
-    const double yEst = model.intercept + model.slope * x;
-    const double error = y - yEst;
-
-    // Actualizacion con gradiente descendente estocastico (SGD) en linea.
-    const double lr = 1.0 / (static_cast<double>(model.sampleCount) + 1.0);
-    model.intercept += lr * error;
-    model.slope += lr * error * x;
-
+    model.sumX += x;
+    model.sumY += y;
+    model.sumXX += x * x;
+    model.sumXY += x * y;
     model.sampleCount += 1;
+
+    const double n = static_cast<double>(model.sampleCount);
+    const double denom = n * model.sumXX - model.sumX * model.sumX;
+    if (std::abs(denom) > 1e-9) {
+        model.slope = (n * model.sumXY - model.sumX * model.sumY) / denom;
+        model.intercept = (model.sumY - model.slope * model.sumX) / n;
+    }
+
     model.lastWeight = weightKg;
     model.lastHeight = heightCm;
     return model;

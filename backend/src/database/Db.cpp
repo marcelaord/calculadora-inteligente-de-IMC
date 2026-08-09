@@ -46,8 +46,21 @@ void Db::createSchema() {
     last_height   DOUBLE PRECISION NOT NULL DEFAULT 0,
     last_bmi      DOUBLE PRECISION NOT NULL DEFAULT 0,
     t_start       BIGINT NOT NULL DEFAULT 0,
+    sum_x         DOUBLE PRECISION NOT NULL DEFAULT 0,
+    sum_y         DOUBLE PRECISION NOT NULL DEFAULT 0,
+    sum_xx        DOUBLE PRECISION NOT NULL DEFAULT 0,
+    sum_xy        DOUBLE PRECISION NOT NULL DEFAULT 0,
     last_updated  TIMESTAMPTZ NOT NULL DEFAULT now()
 ))SQL",
+        // Migracion para bases existentes (idempotente).
+        R"SQL(ALTER TABLE ai_models
+    ADD COLUMN IF NOT EXISTS sum_x DOUBLE PRECISION NOT NULL DEFAULT 0)SQL",
+        R"SQL(ALTER TABLE ai_models
+    ADD COLUMN IF NOT EXISTS sum_y DOUBLE PRECISION NOT NULL DEFAULT 0)SQL",
+        R"SQL(ALTER TABLE ai_models
+    ADD COLUMN IF NOT EXISTS sum_xx DOUBLE PRECISION NOT NULL DEFAULT 0)SQL",
+        R"SQL(ALTER TABLE ai_models
+    ADD COLUMN IF NOT EXISTS sum_xy DOUBLE PRECISION NOT NULL DEFAULT 0)SQL",
     };
 
     try {

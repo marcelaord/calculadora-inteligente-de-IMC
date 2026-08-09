@@ -21,6 +21,13 @@ struct ModelState {
     double lastBmi{0.0};
     int64_t tStart{0};  // epoch en dias
 
+    // Sumas acumuladas para minimos cuadrados recursivos exactos:
+    // slope = (n*Sxy - Sx*Sy) / (n*Sxx - Sx^2), intercept = (Sy - slope*Sx)/n
+    double sumX{0.0};
+    double sumY{0.0};
+    double sumXX{0.0};
+    double sumXY{0.0};
+
     double predictWeightAt(int64_t daysFromStart) const {
         return intercept + slope * static_cast<double>(daysFromStart);
     }
