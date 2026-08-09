@@ -14,6 +14,12 @@ public:
                   drogon::Get, "JwtAuthFilter");
     ADD_METHOD_TO(HealthController::latestRecord, "/api/v1/records/latest",
                   drogon::Get, "JwtAuthFilter");
+    ADD_METHOD_TO(HealthController::updateRecord, "/api/v1/records/{1}",
+                  drogon::Put, "JwtAuthFilter");
+    ADD_METHOD_TO(HealthController::deleteRecord, "/api/v1/records/{1}",
+                  drogon::Delete, "JwtAuthFilter");
+    ADD_METHOD_TO(HealthController::exportRecords, "/api/v1/records/export",
+                  drogon::Get, "JwtAuthFilter");
     METHOD_LIST_END
 
     drogon::Task<void> addRecord(drogon::HttpRequestPtr req,
@@ -22,6 +28,17 @@ public:
                              std::function<void(const drogon::HttpResponsePtr&)> callback);
     drogon::Task<void> latestRecord(drogon::HttpRequestPtr req,
                               std::function<void(const drogon::HttpResponsePtr&)> callback);
+    drogon::Task<void> updateRecord(
+        drogon::HttpRequestPtr req,
+        std::function<void(const drogon::HttpResponsePtr&)> callback,
+        const int64_t& recordId);
+    drogon::Task<void> deleteRecord(
+        drogon::HttpRequestPtr req,
+        std::function<void(const drogon::HttpResponsePtr&)> callback,
+        const int64_t& recordId);
+    drogon::Task<void> exportRecords(
+        drogon::HttpRequestPtr req,
+        std::function<void(const drogon::HttpResponsePtr&)> callback);
 };
 
 }  // namespace healthiq::api

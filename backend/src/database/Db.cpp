@@ -23,6 +23,7 @@ void Db::createSchema() {
     name          TEXT NOT NULL,
     password_hash TEXT NOT NULL,
     role          TEXT NOT NULL DEFAULT 'user',
+    goal_weight_kg DOUBLE PRECISION NOT NULL DEFAULT 0,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 ))SQL",
         R"SQL(CREATE TABLE IF NOT EXISTS health_records (
@@ -61,6 +62,9 @@ void Db::createSchema() {
     ADD COLUMN IF NOT EXISTS sum_xx DOUBLE PRECISION NOT NULL DEFAULT 0)SQL",
         R"SQL(ALTER TABLE ai_models
     ADD COLUMN IF NOT EXISTS sum_xy DOUBLE PRECISION NOT NULL DEFAULT 0)SQL",
+        // Migracion para bases existentes (idempotente).
+        R"SQL(ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS goal_weight_kg DOUBLE PRECISION NOT NULL DEFAULT 0)SQL",
     };
 
     try {

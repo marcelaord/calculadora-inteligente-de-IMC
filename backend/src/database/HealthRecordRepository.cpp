@@ -67,4 +67,59 @@ HealthRecordRepository::latest(int64_t userId) const {
     co_return fromRow(result[0]);
 }
 
+drogon::Task<std::optional<core::HealthRecord>>
+HealthRecordRepository::findById(int64_t userId, int64_t id) const {
+    auto result = co_await db_->execSqlCoro(
+        "SELECT id, user_id, weight_kg, height_cm, bmi, activity_level, note, "
+        "created_at "
+        "FROM health_records WHERE id = $1 AND user_id = $2 LIMIT 1",
+        id, userId);
+    if (result.empty()) {
+        co_return std::nullopt;
+    }
+    co_return fromRow(result[0]);
+}
+
+drogon::Task<core::HealthRecord> HealthRecordRepository::update(
+    const core::HealthRecord& record) const {
+    auto result = co_await db_->execSqlCoro(
+        "UPDATE health_records "
+        "SET weight_kg = $3, height_cm = $4, bmi = $5, activity_level = $6, "
+        "note = $7 "
+        "WHERE id = $1 AND user_id = $2 "
+        "RETURNING id, user_id, weight_kg, height_cm, bmi, activity_level, "
+        "note, created_at",
+        record.id, record.userId, record.weightKg, record.heightCm, record.bmi,
+        record.activityLevel, record.note);
+    if (result.empty()) {
+        throw std::runtime_error("Registro no encontrado");
+    }
+    co_return fromRow(result[0]);
+}
+
+drogon::Task<bool> HealthRecordRepository::remove(int64_t userId, int64_t id) const {
+    auto result = co_await db_->execSqlCoro(
+        "DELETE FROM health_records WHERE id = $1 AND user_id = $2 RETURNING id",
+        id, userId);
+    co_return !result.empty();
+}
+
+drogon::Task<std::vector<core::HealthRecord>>
+HealthRecordRepository::listChronological(int64_t userId) const {
+    std::vector<core::HealthRecord> records;
+    auto result = co_await db_->execSqlCoro(
+        "SELECT id, user_id, weight_kg, height_cm, bmi, activity_level, note, "
+        "created_at, (EXTRACT(EPOCH FROM created_at)::bigint / 86400) AS "
+        "epoch_day "
+        "FROM health_records WHERE user_id = $1 ORDER BY created_at ASC",
+        userId);
+    records.reserve(result.size());
+    for (const auto& row : result) {
+        auto r = fromRow(row);
+        r.epochDay = row["epoch_day"].as<int64_t>();
+        records.push_back(r);
+    }
+    co_return records;
+}
+
 }  // namespace healthiq::database

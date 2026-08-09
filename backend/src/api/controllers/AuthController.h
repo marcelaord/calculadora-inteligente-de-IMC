@@ -14,6 +14,8 @@ public:
                   drogon::Post);
     ADD_METHOD_TO(AuthController::me, "/api/v1/auth/me",
                   drogon::Get, "JwtAuthFilter");
+    ADD_METHOD_TO(AuthController::updateMe, "/api/v1/users/me",
+                  drogon::Put, "JwtAuthFilter");
     METHOD_LIST_END
 
     drogon::Task<void> registerUser(drogon::HttpRequestPtr req,
@@ -22,6 +24,8 @@ public:
                        std::function<void(const drogon::HttpResponsePtr&)> callback);
     drogon::Task<void> me(drogon::HttpRequestPtr req,
                     std::function<void(const drogon::HttpResponsePtr&)> callback);
+    drogon::Task<void> updateMe(drogon::HttpRequestPtr req,
+                          std::function<void(const drogon::HttpResponsePtr&)> callback);
 };
 
 }  // namespace healthiq::api

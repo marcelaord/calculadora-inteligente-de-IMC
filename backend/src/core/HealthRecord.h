@@ -15,6 +15,7 @@ struct HealthRecord {
     int activityLevel{3};  // 1..5
     std::string note;
     std::string createdAt;
+    int64_t epochDay{0};  // dia epoch (para reentrenar el modelo)
 };
 
 struct User {
@@ -24,6 +25,7 @@ struct User {
     std::string passwordHash;
     std::string role{"user"};
     std::string createdAt;
+    double goalWeightKg{0.0};  // 0 = sin meta definida
 };
 
 }  // namespace healthiq::core

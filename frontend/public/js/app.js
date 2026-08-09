@@ -5,11 +5,18 @@ const state = {
   user: JSON.parse(localStorage.getItem("healthiq_user") || "null"),
   ws: null,
   chart: null,
+  bmiChart: null,
+  records: [],
+  editingId: null,
 };
 
 const $ = (id) => document.getElementById(id);
 
 /* ---------------- Utilidades ---------------- */
+
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
 
 async function api(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
@@ -35,6 +42,16 @@ function toast(message) {
 
 function fmt(n, d = 1) {
   return n === null || n === undefined || isNaN(n) ? "--" : Number(n).toFixed(d);
+}
+
+function fmtDate(s) {
+  return String(s || "").replace("T", " ").slice(0, 16);
+}
+
+function escapeHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = String(s ?? "");
+  return d.innerHTML;
 }
 
 /* ---------------- Autenticacion ---------------- */
@@ -96,10 +113,9 @@ function initAuth() {
 
 /* ---------------- Dashboard ---------------- */
 
-function initChart() {
-  if (state.chart) return;
-  const ctx = $("trend-chart").getContext("2d");
-  state.chart = new Chart(ctx, {
+function makeChart(canvasId, lineColor, fillColor) {
+  const ctx = $(canvasId).getContext("2d");
+  return new Chart(ctx, {
     type: "line",
     data: { labels: [], datasets: [] },
     options: {
@@ -108,15 +124,33 @@ function initChart() {
       animation: { duration: 500 },
       interaction: { mode: "index", intersect: false },
       plugins: {
-        legend: { labels: { color: "#8b9bc4" } },
-        tooltip: { backgroundColor: "#151f38", titleColor: "#e8eefc", bodyColor: "#e8eefc" },
+        legend: { labels: { color: cssVar("--muted") || "#8b9bc4" } },
+        tooltip: {
+          backgroundColor: cssVar("--card-2") || "#151f38",
+          titleColor: cssVar("--text") || "#e8eefc",
+          bodyColor: cssVar("--text") || "#e8eefc",
+        },
       },
       scales: {
-        x: { ticks: { color: "#8b9bc4" }, grid: { color: "#1a2645" } },
-        y: { ticks: { color: "#8b9bc4" }, grid: { color: "#1a2645" } },
+        x: { ticks: { color: cssVar("--muted") }, grid: { color: cssVar("--border") } },
+        y: { ticks: { color: cssVar("--muted") }, grid: { color: cssVar("--border") } },
       },
     },
   });
+}
+
+function initCharts() {
+  if (state.chart) return;
+  state.chart = makeChart("trend-chart", cssVar("--accent") || "#38bdf8",
+    "rgba(56,189,248,.15)");
+  state.bmiChart = makeChart("bmi-chart", cssVar("--green") || "#34d399",
+    "rgba(52,211,153,.15)");
+}
+
+function resetCharts() {
+  if (state.chart) { state.chart.destroy(); state.chart = null; }
+  if (state.bmiChart) { state.bmiChart.destroy(); state.bmiChart = null; }
+  initCharts();
 }
 
 function renderMetrics(data) {
@@ -135,47 +169,108 @@ function renderMetrics(data) {
 }
 
 function renderChart(data) {
-  const history = (data.history || []).reverse(); // ascendente por fecha
-  const labels = history.map((h) => h.date.slice(5, 16).replace("T", " "));
+  const history = (data.history || []).slice().reverse(); // ascendente por fecha
+  const labels = history.map((h) => fmtDate(h.date));
   const weights = history.map((h) => h.weightKg);
+  const bmis = history.map((h) => h.bmi);
 
-  const datasets = [{
+  state.chart.data.labels = labels;
+  state.chart.data.datasets = [{
     label: "Peso (kg)",
     data: weights,
-    borderColor: "#38bdf8",
-    backgroundColor: "rgba(56,189,248,.15)",
+    borderColor: cssVar("--accent") || "#38bdf8",
+    backgroundColor: (cssVar("--accent") ? `${cssVar("--accent")}26` : "rgba(56,189,248,.15)"),
     fill: true,
     tension: 0.3,
     pointRadius: 4,
-    pointBackgroundColor: "#38bdf8",
+    pointBackgroundColor: cssVar("--accent") || "#38bdf8",
   }];
 
   const a = data.analysis || {};
   const pred = a.prediction;
+  const wLabels = labels.slice();
+  const wDatasets = state.chart.data.datasets.slice();
+
   if (pred && history.length) {
     const lastW = history[history.length - 1].weightKg;
-    const dates = [
-      history[history.length - 1].date.slice(5, 16).replace("T", " "),
-      null, null, null,
-    ];
-    const p = [lastW, pred.weight7d, pred.weight30d, pred.weight90d];
-    datasets.push({
+    wLabels.push("+7 dias", "+30 dias", "+90 dias");
+    wDatasets.push({
       label: "Prediccion IA (kg)",
-      data: p,
-      borderColor: "#6366f1",
-      backgroundColor: "rgba(99,102,241,.2)",
+      data: [lastW, pred.weight7d, pred.weight30d, pred.weight90d],
+      borderColor: cssVar("--accent-2") || "#6366f1",
+      backgroundColor: (cssVar("--accent-2") ? `${cssVar("--accent-2")}33` : "rgba(99,102,241,.2)"),
       borderDash: [6, 4],
       fill: false,
       tension: 0.3,
       pointRadius: 5,
-      pointBackgroundColor: "#6366f1",
+      pointBackgroundColor: cssVar("--accent-2") || "#6366f1",
     });
-    labels.push("+7 dias", "+30 dias", "+90 dias");
   }
-
-  state.chart.data.labels = labels;
-  state.chart.data.datasets = datasets;
+  state.chart.data.labels = wLabels;
+  state.chart.data.datasets = wDatasets;
   state.chart.update();
+
+  const bLabels = labels.slice();
+  const bDatasets = [{
+    label: "IMC",
+    data: bmis,
+    borderColor: cssVar("--green") || "#34d399",
+    backgroundColor: (cssVar("--green") ? `${cssVar("--green")}26` : "rgba(52,211,153,.15)"),
+    fill: true,
+    tension: 0.3,
+    pointRadius: 4,
+    pointBackgroundColor: cssVar("--green") || "#34d399",
+  }];
+  if (pred && history.length) {
+    const lastBmi = history[history.length - 1].bmi;
+    bLabels.push("+30 dias", "+90 dias");
+    bDatasets.push({
+      label: "Proyeccion IA (IMC)",
+      data: [lastBmi, pred.bmi30d, pred.bmi90d],
+      borderColor: cssVar("--accent-2") || "#6366f1",
+      backgroundColor: (cssVar("--accent-2") ? `${cssVar("--accent-2")}33` : "rgba(99,102,241,.2)"),
+      borderDash: [6, 4],
+      fill: false,
+      tension: 0.3,
+      pointRadius: 5,
+      pointBackgroundColor: cssVar("--accent-2") || "#6366f1",
+    });
+  }
+  state.bmiChart.data.labels = bLabels;
+  state.bmiChart.data.datasets = bDatasets;
+  state.bmiChart.update();
+}
+
+function renderGoal(data) {
+  const goal = data.goal;
+  const box = $("goal-status");
+  if (!goal) {
+    $("goal-weight").value = "";
+    box.innerHTML = '<p class="placeholder">Define una meta de peso para ver tu progreso.</p>';
+    return;
+  }
+  const history = (data.history || []).slice().reverse();
+  const start = history.length ? history[0].weightKg : goal.currentWeight;
+  const current = goal.currentWeight;
+  const target = goal.goalWeightKg;
+  $("goal-weight").value = target;
+
+  let pct = target !== start ? ((start - current) / (start - target)) * 100 : 100;
+  pct = Math.max(0, Math.min(100, pct));
+  const losing = target < start;
+  const deltaTxt = goal.reached
+    ? '<span class="ok-txt">Meta alcanzada</span>'
+    : `<span>${losing ? "Te faltan" : "Te sobran"} ${fmt(Math.abs(goal.deltaKg))} kg</span>`;
+
+  box.innerHTML = `
+    <div class="goal-info">
+      <span>Inicio <strong>${fmt(start)} kg</strong></span>
+      <span>Actual <strong>${fmt(current)} kg</strong></span>
+      <span>Meta <strong>${fmt(target)} kg</strong></span>
+      ${deltaTxt}
+    </div>
+    <div class="progress"><div class="progress-bar" style="width:${pct.toFixed(1)}%"></div></div>
+    <div class="progress-labels"><span>${Math.round(pct)}% de la meta</span></div>`;
 }
 
 function renderRecommendations(data) {
@@ -219,9 +314,91 @@ async function loadDashboard() {
   const data = await api("/dashboard/summary");
   renderMetrics(data);
   renderChart(data);
+  renderGoal(data);
   renderRecommendations(data);
   renderModelInfo(data);
   return data;
+}
+
+/* ---------------- Historial (editar / eliminar) ---------------- */
+
+function renderHistory() {
+  const box = $("history-body");
+  box.innerHTML = "";
+  if (!state.records.length) {
+    box.innerHTML = '<tr><td colspan="6" class="placeholder hist-empty">Sin registros todavia.</td></tr>';
+    return;
+  }
+  state.records.forEach((r) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(fmtDate(r.createdAt))}</td>
+      <td>${fmt(r.weightKg)} kg</td>
+      <td>${fmt(r.bmi)}</td>
+      <td>${r.activityLevel}</td>
+      <td class="cell-note">${escapeHtml(r.note || "")}</td>
+      <td class="cell-actions">
+        <button class="btn-icon" data-act="edit" data-id="${r.id}">Editar</button>
+        <button class="btn-icon danger" data-act="delete" data-id="${r.id}">Eliminar</button>
+      </td>`;
+    box.appendChild(tr);
+  });
+}
+
+function resetRecordForm() {
+  $("record-form").reset();
+  state.editingId = null;
+  $("record-submit").textContent = "Guardar y analizar";
+  $("record-cancel").classList.add("hidden");
+}
+
+function startEdit(id) {
+  const rec = state.records.find((r) => r.id === id);
+  if (!rec) return;
+  state.editingId = id;
+  $("r-weight").value = rec.weightKg;
+  $("r-height").value = rec.heightCm;
+  $("r-activity").value = rec.activityLevel;
+  $("r-note").value = rec.note || "";
+  $("record-submit").textContent = "Guardar cambios";
+  $("record-cancel").classList.remove("hidden");
+  const result = $("record-result");
+  result.className = "record-result show ok";
+  result.innerHTML = "<strong>Editando registro del " + escapeHtml(fmtDate(rec.createdAt)) + ".</strong>";
+  $("r-weight").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+async function removeRecord(id) {
+  if (!confirm("Eliminar este registro? La IA se reentrenara sin el.")) return;
+  try {
+    await api(`/records/${id}`, { method: "DELETE" });
+    toast("Registro eliminado");
+    await Promise.all([loadDashboard(), loadHistory()]);
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
+function initHistoryEvents() {
+  $("history-body").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-act]");
+    if (!btn) return;
+    const id = Number(btn.dataset.id);
+    if (btn.dataset.act === "edit") startEdit(id);
+    else if (btn.dataset.act === "delete") removeRecord(id);
+  });
+  $("record-cancel").addEventListener("click", () => {
+    resetRecordForm();
+    const result = $("record-result");
+    result.className = "record-result";
+    result.innerHTML = "";
+  });
+}
+
+async function loadHistory() {
+  const data = await api("/records?limit=200");
+  state.records = data.records || [];
+  renderHistory();
 }
 
 /* ---------------- Registro de mediciones ---------------- */
@@ -235,21 +412,134 @@ function initRecordForm() {
       activityLevel: parseInt($("r-activity").value, 10),
       note: $("r-note").value.trim(),
     };
+    const isEdit = state.editingId != null;
     const box = $("record-result");
     box.className = "record-result";
     try {
-      const data = await api("/records", { method: "POST", body: JSON.stringify(payload) });
-      const rec = data.record;
+      const data = await api(isEdit ? `/records/${state.editingId}` : "/records", {
+        method: isEdit ? "PUT" : "POST",
+        body: JSON.stringify(payload),
+      });
+      const rec = isEdit ? data.record : data.record;
       box.classList.add("show", "ok");
       box.innerHTML = `
-        <strong>Registro guardado.</strong> IMC = ${fmt(rec.bmi)} · ${rec.category}
-        <div class="formula">${rec.procedure.formula}</div>`;
-      $("record-form").reset();
-      await loadDashboard();
+        <strong>${isEdit ? "Registro actualizado." : "Registro guardado."}</strong> IMC = ${fmt(rec.bmi)}
+        ${isEdit ? "" : `<div class="formula">${data.record.procedure.formula}</div>`}`;
+      resetRecordForm();
+      await Promise.all([loadDashboard(), loadHistory()]);
     } catch (err) {
       box.classList.add("show", "err");
       box.textContent = err.message;
     }
+  });
+}
+
+/* ---------------- Meta de peso ---------------- */
+
+function initGoalForm() {
+  $("goal-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const v = parseFloat($("goal-weight").value);
+    if (!(v > 0)) {
+      toast("Ingresa una meta valida");
+      return;
+    }
+    try {
+      await api("/users/me", { method: "PUT", body: JSON.stringify({ goalWeightKg: v }) });
+      toast("Meta guardada");
+      await loadDashboard();
+    } catch (err) {
+      toast(err.message);
+    }
+  });
+}
+
+/* ---------------- Perfil ---------------- */
+
+function closeProfile() {
+  $("profile-modal").classList.add("hidden");
+  $("profile-error").textContent = "";
+}
+
+function initProfile() {
+  $("profile-btn").addEventListener("click", () => {
+    $("p-name").value = state.user?.name || "";
+    $("p-email").value = state.user?.email || "";
+    $("p-current").value = "";
+    $("p-new").value = "";
+    $("profile-error").textContent = "";
+    $("profile-modal").classList.remove("hidden");
+  });
+  $("profile-close").addEventListener("click", closeProfile);
+  $("profile-cancel").addEventListener("click", closeProfile);
+  $("profile-modal").addEventListener("click", (e) => {
+    if (e.target.id === "profile-modal") closeProfile();
+  });
+  $("profile-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const payload = {
+      name: $("p-name").value.trim(),
+      email: $("p-email").value.trim(),
+    };
+    if ($("p-new").value) {
+      payload.currentPassword = $("p-current").value;
+      payload.newPassword = $("p-new").value;
+    }
+    try {
+      const data = await api("/users/me", { method: "PUT", body: JSON.stringify(payload) });
+      state.user = data.user;
+      localStorage.setItem("healthiq_user", JSON.stringify(data.user));
+      $("user-label").textContent = data.user.name;
+      toast("Perfil actualizado");
+      closeProfile();
+    } catch (err) {
+      $("profile-error").textContent = err.message;
+    }
+  });
+}
+
+/* ---------------- Exportar CSV ---------------- */
+
+async function downloadCSV() {
+  try {
+    const res = await fetch(`${API_BASE}/records/export`, {
+      headers: { Authorization: `Bearer ${state.token}` },
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      toast(j.message || "Error al exportar");
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "healthiq_records.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
+/* ---------------- Tema claro / oscuro ---------------- */
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  $("theme-btn").textContent = theme === "dark" ? "Tema claro" : "Tema oscuro";
+}
+
+function initTheme() {
+  const saved = localStorage.getItem("healthiq_theme") || "dark";
+  applyTheme(saved);
+  $("theme-btn").addEventListener("click", () => {
+    const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    localStorage.setItem("healthiq_theme", next);
+    applyTheme(next);
+    resetCharts();
+    loadDashboard().catch(() => {});
   });
 }
 
@@ -278,6 +568,11 @@ function connectWs() {
       if (msg.event === "new_record") {
         toast(`Nuevo registro analizado por la IA · IMC ${fmt(msg.record.bmi)}`);
         loadDashboard().catch(() => {});
+        loadHistory().catch(() => {});
+      } else if (msg.event === "update_record" || msg.event === "delete_record") {
+        toast(msg.event === "update_record" ? "Registro actualizado" : "Registro eliminado");
+        loadDashboard().catch(() => {});
+        loadHistory().catch(() => {});
       }
     } catch (_) {}
   };
@@ -299,19 +594,24 @@ function initLogout() {
 async function enterApp() {
   showView("dash");
   connectWs();
-  await loadDashboard();
+  await Promise.all([loadDashboard(), loadHistory()]);
 }
 
 function bootstrap() {
   initAuth();
   initLogout();
   initRecordForm();
-  initChart();
+  initHistoryEvents();
+  initGoalForm();
+  initProfile();
+  initTheme();
+  initCharts();
+  $("export-btn").addEventListener("click", downloadCSV);
   if (state.token && state.user) {
     $("user-label").textContent = state.user.name;
     showView("dash");
     connectWs();
-    loadDashboard().catch(() => {
+    Promise.all([loadDashboard(), loadHistory()]).catch(() => {
       state.token = null;
       localStorage.removeItem("healthiq_token");
       showView("auth");

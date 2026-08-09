@@ -8,8 +8,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
-  <div id="app"></div>
-
   <!-- Vista de autenticacion -->
   <section id="auth-view" class="auth-view hidden">
     <div class="auth-card">
@@ -51,6 +49,9 @@
       <div class="top-actions">
         <span id="ws-badge" class="ws-badge offline">SIN CONEXION</span>
         <span id="user-label" class="user-label"></span>
+        <button id="export-btn" class="btn-ghost">Exportar CSV</button>
+        <button id="profile-btn" class="btn-ghost">Perfil</button>
+        <button id="theme-btn" class="btn-ghost">Tema claro</button>
         <button id="logout-btn" class="btn-ghost">Salir</button>
       </div>
     </header>
@@ -89,11 +90,34 @@
         </div>
       </section>
 
+      <section class="panel goal-panel">
+        <div class="goal-head">
+          <div>
+            <h3>Meta de peso</h3>
+            <p class="sub">Define tu peso objetivo y sigue tu progreso.</p>
+          </div>
+          <form id="goal-form" class="goal-form">
+            <input type="number" id="goal-weight" step="0.1" min="1" max="600" placeholder="70" />
+            <button type="submit" class="btn-primary sm">Guardar meta</button>
+          </form>
+        </div>
+        <div id="goal-status" class="goal-status">
+          <p class="placeholder">Define una meta de peso para ver tu progreso.</p>
+        </div>
+      </section>
+
       <section class="grid-2">
         <div class="panel">
           <h3>Evolucion del peso y prediccion</h3>
           <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
         </div>
+        <div class="panel">
+          <h3>Evolucion del IMC y proyeccion</h3>
+          <div class="chart-wrap"><canvas id="bmi-chart"></canvas></div>
+        </div>
+      </section>
+
+      <section class="grid-2">
         <div class="panel">
           <h3>Registrar medicion</h3>
           <form id="record-form" class="record-form">
@@ -121,9 +145,30 @@
               <label for="r-note">Nota (opcional)</label>
               <input type="text" id="r-note" placeholder="Ej. rutina de ejercicios" />
             </div>
-            <button type="submit" class="btn-primary">Guardar y analizar</button>
+            <button type="submit" class="btn-primary" id="record-submit">Guardar y analizar</button>
+            <button type="button" class="btn-ghost hidden" id="record-cancel">Cancelar edicion</button>
           </form>
           <div id="record-result" class="record-result"></div>
+        </div>
+        <div class="panel">
+          <h3>Historial</h3>
+          <div class="hist-wrap">
+            <table class="hist-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Peso</th>
+                  <th>IMC</th>
+                  <th>Act.</th>
+                  <th>Nota</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="history-body">
+                <tr><td colspan="6" class="placeholder hist-empty">Sin registros todavia.</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -145,6 +190,37 @@
 
     <div id="toast" class="toast hidden"></div>
   </section>
+
+  <!-- Modal de perfil -->
+  <div id="profile-modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>Mi perfil</h3>
+        <button id="profile-close" class="btn-ghost">Cerrar</button>
+      </div>
+      <form id="profile-form">
+        <div class="field">
+          <label for="p-name">Nombre</label>
+          <input type="text" id="p-name" required />
+        </div>
+        <div class="field">
+          <label for="p-email">Email</label>
+          <input type="email" id="p-email" required />
+        </div>
+        <div class="field">
+          <label for="p-current">Contrasena actual</label>
+          <input type="password" id="p-current" placeholder="Requerida para cambiar email o contrasena" />
+        </div>
+        <div class="field">
+          <label for="p-new">Nueva contrasena</label>
+          <input type="password" id="p-new" placeholder="Minimo 8 caracteres (opcional)" minlength="8" />
+        </div>
+        <button type="submit" class="btn-primary">Guardar cambios</button>
+        <button type="button" class="btn-ghost" id="profile-cancel">Cancelar</button>
+        <p id="profile-error" class="error-msg"></p>
+      </form>
+    </div>
+  </div>
 
   <script src="js/app.js"></script>
 </body>

@@ -25,6 +25,10 @@ public:
     // Resumen para el dashboard en tiempo real.
     drogon::Task<Json::Value> dashboard(int64_t userId);
 
+    // Reconstruye el modelo desde cero usando todos los registros en orden
+    // cronologico (se llama tras editar o eliminar un registro).
+    drogon::Task<void> rebuild(int64_t userId);
+
 private:
     static int64_t nowEpochDays();
     database::AiModelRepository models_;

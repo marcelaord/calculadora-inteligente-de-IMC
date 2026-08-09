@@ -7,6 +7,8 @@
 
 #include <chrono>
 #include <cstdint>
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -58,6 +60,22 @@ int64_t epochDays(int64_t epochSeconds) {
     return epochSeconds / (24LL * 3600LL);
 }
 
+// Formatea epoch seconds como "YYYY-MM-DD HH:MM:SS" (UTC). Se pasa como texto
+// y se castea en SQL porque to_timestamp(int8) no resuelve en sentencias
+// preparadas con el parametro tipado como bigint.
+std::string formatIsoUtc(int64_t epochSeconds) {
+    const std::time_t t = static_cast<std::time_t>(epochSeconds);
+    std::tm tmv{};
+#ifdef _WIN32
+    gmtime_s(&tmv, &t);
+#else
+    gmtime_r(&t, &tmv);
+#endif
+    std::ostringstream oss;
+    oss << std::put_time(&tmv, "%Y-%m-%d %H:%M:%S");
+    return oss.str();
+}
+
 }  // namespace
 
 void SeedData::run(drogon::orm::DbClientPtr db) {
@@ -88,9 +106,9 @@ void SeedData::run(drogon::orm::DbClientPtr db) {
             db->execSqlSync(
                 "INSERT INTO health_records(user_id, weight_kg, height_cm, "
                 "bmi, activity_level, note, created_at) "
-                "VALUES($1, $2, $3, $4, $5, $6, to_timestamp($7))",
+                "VALUES($1, $2, $3, $4, $5, $6, $7::timestamptz)",
                 userId, p.weightKg, kDemoHeightCm, bmi.bmi, kDemoActivity,
-                p.note, createdAt);
+                p.note, formatIsoUtc(createdAt));
 
             model = ai::Predictor::learn(std::move(model), p.weightKg,
                                          kDemoHeightCm, epochDays(createdAt));

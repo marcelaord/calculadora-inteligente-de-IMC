@@ -14,6 +14,25 @@
   --radius: 14px;
 }
 
+:root[data-theme="light"] {
+  --bg: #eef1f7;
+  --bg-2: #ffffff;
+  --card: #ffffff;
+  --card-2: #eef1f8;
+  --border: #d9e0ee;
+  --text: #1b2340;
+  --muted: #5b6b8f;
+  --accent: #0284c7;
+  --accent-2: #6366f1;
+  --green: #059669;
+  --amber: #b45309;
+  --red: #dc2626;
+}
+
+:root[data-theme="light"] body {
+  background: radial-gradient(1200px 600px at 80% -10%, #dbe4f5 0%, var(--bg) 55%);
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
@@ -21,6 +40,7 @@ body {
   background: radial-gradient(1200px 600px at 80% -10%, #16224a 0%, var(--bg) 55%);
   color: var(--text);
   min-height: 100vh;
+  transition: background .3s, color .3s;
 }
 
 .hidden { display: none !important; }
@@ -192,3 +212,84 @@ body {
   font-size: 14px; animation: slideUp .3s ease;
 }
 @keyframes slideUp { from { opacity: 0; transform: translate(-50%, 16px);} to { opacity: 1; transform: translate(-50%,0);} }
+
+/* ---------- Responsive topbar ---------- */
+@media (max-width: 860px) {
+  .topbar { flex-wrap: wrap; gap: 8px; padding: 12px 16px; }
+  .top-actions { flex-wrap: wrap; gap: 8px; }
+  .row { grid-template-columns: 1fr; }
+}
+
+/* ---------- Meta de peso ---------- */
+.goal-panel { margin-bottom: 24px; }
+.goal-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.goal-head h3 { margin: 0 0 4px; }
+.goal-head .sub { color: var(--muted); font-size: 13px; }
+.goal-form { display: flex; gap: 10px; align-items: center; }
+.goal-form input {
+  width: 110px; padding: 11px 12px;
+  background: var(--bg-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px;
+  font-size: 15px; outline: none;
+}
+.goal-form input:focus { border-color: var(--accent); }
+.btn-primary.sm { width: auto; margin-top: 0; padding: 11px 18px; font-size: 13px; }
+
+.goal-status { display: flex; flex-direction: column; gap: 10px; }
+.goal-info { display: flex; flex-wrap: wrap; gap: 18px; color: var(--muted); font-size: 14px; }
+.goal-info strong { color: var(--text); }
+.ok-txt { color: var(--green); font-weight: 700; }
+.progress {
+  height: 12px; border-radius: 20px;
+  background: var(--card-2); border: 1px solid var(--border); overflow: hidden;
+}
+.progress-bar {
+  height: 100%; border-radius: 20px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width .5s ease;
+}
+.progress-labels { color: var(--muted); font-size: 13px; }
+
+/* ---------- Historial ---------- */
+.hist-wrap { max-height: 380px; overflow-y: auto; }
+.hist-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.hist-table th {
+  text-align: left; color: var(--muted); font-weight: 600;
+  padding: 8px 10px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--card);
+}
+.hist-table td {
+  padding: 10px; border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.hist-table tr:hover td { background: var(--card-2); }
+.cell-note { color: var(--muted); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cell-actions { display: flex; gap: 8px; white-space: nowrap; }
+.hist-empty { padding: 18px; text-align: center; }
+
+.btn-icon {
+  background: transparent; color: var(--accent);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 5px 10px; cursor: pointer; font-size: 12px; font-weight: 600;
+}
+.btn-icon:hover { border-color: var(--accent); }
+.btn-icon.danger { color: var(--red); }
+.btn-icon.danger:hover { border-color: var(--red); background: rgba(248,113,113,.08); }
+
+/* ---------- Modal ---------- */
+.modal {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(4, 8, 18, .7); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-card {
+  background: linear-gradient(180deg, var(--card), var(--bg-2));
+  border: 1px solid var(--border); border-radius: 18px;
+  padding: 26px; width: 100%; max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+}
+.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.modal-card form .btn-ghost { width: 100%; margin-top: 10px; padding: 12px; font-size: 14px; }

@@ -109,4 +109,16 @@ drogon::Task<Json::Value> AiEngine::dashboard(int64_t userId) {
     co_return out;
 }
 
+drogon::Task<void> AiEngine::rebuild(int64_t userId) {
+    auto records = co_await records_.listChronological(userId);
+    ai::ModelState model;
+    model.userId = userId;
+    for (const auto& r : records) {
+        model = Predictor::learn(std::move(model), r.weightKg, r.heightCm, r.epochDay);
+        model.lastBmi = r.bmi;
+    }
+    co_await models_.save(model);
+    co_return;
+}
+
 }  // namespace healthiq::ai
