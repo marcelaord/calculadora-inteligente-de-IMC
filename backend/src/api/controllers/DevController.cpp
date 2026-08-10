@@ -48,8 +48,8 @@ drogon::Task<void> DevController::fillHistory(
         const Json::Value* body = bodyPtr ? bodyPtr.get() : &empty;
 
         const int days = (*body).get("days", 30).asInt();
-        if (days < 7 || days > 120) {
-            callback(badRequest("days debe estar entre 7 y 120."));
+        if (days < 7 || days > 365) {
+            callback(badRequest("days debe estar entre 7 y 365."));
             co_return;
         }
 
@@ -58,6 +58,8 @@ drogon::Task<void> DevController::fillHistory(
         const int activityLevel = (*body).get("activityLevel", 3).asInt();
         const double noiseKg = (*body).get("noiseKg", 0.4).asDouble();
         const std::string trend = (*body).get("trend", "stable").asString();
+        const double lossPerDay =
+            (*body).get("lossKgPerDay", 0.0).asDouble();
 
         if (baseWeight <= 20 || baseWeight > 300 || heightCm < 100 ||
             heightCm > 250) {
@@ -74,9 +76,15 @@ drogon::Task<void> DevController::fillHistory(
             co_return;
         }
 
-        const double slopeKgPerDay = trend == "loss"  ? -0.05
-                                     : trend == "gain" ? 0.05
-                                                       : 0.0;
+        // baseWeight es el peso MAS RECIENTE (hoy). Para "loss" los registros
+        // mas antiguos son mas pesados (perdida real hacia el pasado); para
+        // "gain" mas livianos. lossKgPerDay permite ajustar la pendiente.
+        double deltaPerDay = 0.0;
+        if (trend == "loss") {
+            deltaPerDay = lossPerDay > 0.0 ? lossPerDay : 0.05;
+        } else if (trend == "gain") {
+            deltaPerDay = lossPerDay > 0.0 ? -lossPerDay : -0.05;
+        }
 
         // Borra el historial actual para dejar una serie limpia y consistente.
         co_await AppServices::instance().db().client()->execSqlCoro(
@@ -95,7 +103,7 @@ drogon::Task<void> DevController::fillHistory(
         for (int i = 0; i < days; ++i) {
             const int daysAgo = days - 1 - i;
             const double weight =
-                baseWeight + slopeKgPerDay * static_cast<double>(daysAgo) +
+                baseWeight + deltaPerDay * static_cast<double>(daysAgo) +
                 noise(rng);
             const auto bmi =
                 core::BmiCalculator::calculate(weight, heightCm);

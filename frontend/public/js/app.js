@@ -48,6 +48,24 @@ function fmtDate(s) {
   return String(s || "").replace("T", " ").slice(0, 16);
 }
 
+// Regresion lineal de minimos cuadrados sobre una serie: devuelve los valores
+// ajustados de la recta y = m*x + b en cada punto del arreglo.
+function linearFit(ys) {
+  const n = ys.length;
+  let sx = 0, sy = 0, sxx = 0, sxy = 0;
+  for (let i = 0; i < n; i++) {
+    sx += i;
+    sy += ys[i];
+    sxx += i * i;
+    sxy += i * ys[i];
+  }
+  const denom = n * sxx - sx * sx;
+  if (Math.abs(denom) < 1e-12) return ys.map(() => sy / n);
+  const m = (n * sxy - sx * sy) / denom;
+  const b = (sy - m * sx) / n;
+  return ys.map((_, i) => m * i + b);
+}
+
 function escapeHtml(s) {
   const d = document.createElement("div");
   d.textContent = String(s ?? "");
@@ -193,6 +211,22 @@ function renderChart(data) {
   const wLabels = labels.slice();
   const wDatasets = state.chart.data.datasets.slice();
 
+  // Linea de tendencia del modelo: regresion lineal de minimos cuadrados.
+  if (weights.length >= 2) {
+    const fit = linearFit(weights);
+    wDatasets.push({
+      label: "Tendencia del modelo",
+      data: fit,
+      borderColor: cssVar("--accent-2") || "#a78bfa",
+      backgroundColor: "transparent",
+      borderDash: [8, 6],
+      fill: false,
+      tension: 0,
+      pointRadius: 0,
+      borderWidth: 2,
+    });
+  }
+
   if (pred && history.length) {
     const lastW = history[history.length - 1].weightKg;
     wLabels.push("+7 dias", "+30 dias", "+90 dias");
@@ -305,10 +339,16 @@ function renderModelInfo(data) {
     box.innerHTML = '<p class="placeholder">El modelo aprende con cada registro que guardes.</p>';
     return;
   }
+  const conf = pred.confidence || "baja";
+  const confIcon = conf === "alta" ? "✓" : conf === "media" ? "◐" : "○";
   box.innerHTML = `
+    <div class="stat"><span>Algoritmo</span><span>${pred.modelType || "Regresion lineal"}</span></div>
     <div class="stat"><span>Registros aprendidos</span><span>${stats.recordCount}</span></div>
+    <div class="stat"><span>Precision (R²)</span><span>${fmt(pred.r2, 3)}</span></div>
+    <div class="stat"><span>Error medio (RMSE)</span><span>${fmt(pred.rmse, 2)} kg</span></div>
+    <div class="stat"><span>Desviacion media (MAE)</span><span>${fmt(pred.mae, 2)} kg</span></div>
     <div class="stat"><span>Pendiente del modelo</span><span>${fmt(pred.slope, 3)} kg/dia</span></div>
-    <div class="stat"><span>Confianza de prediccion</span><span>${pred.confidence || "baja"}</span></div>
+    <div class="stat"><span>Confianza de prediccion</span><span>${confIcon} ${conf}</span></div>
     <div class="stat"><span>IMC en 90 dias</span><span>${fmt(pred.bmi90d)}</span></div>`;
 }
 

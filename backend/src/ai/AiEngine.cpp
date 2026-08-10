@@ -60,6 +60,41 @@ drogon::Task<Json::Value> AiEngine::analyze(int64_t userId) {
     out["prediction"]["trendKgPerMonth"] = pred.trendKgPerMonth;
     out["prediction"]["slope"] = pred.slope;
     out["prediction"]["confidence"] = pred.confidence;
+    out["prediction"]["sampleCount"] = model->sampleCount;
+    out["prediction"]["modelType"] = "Regresion lineal (minimos cuadrados)";
+
+    // Metricas de precision sobre todo el historial: R^2, RMSE y MAE.
+    {
+        const auto chrono = co_await records_.listChronological(userId);
+        double ssRes = 0.0;
+        double ssTot = 0.0;
+        double maeSum = 0.0;
+        double meanW = 0.0;
+        const double n = static_cast<double>(chrono.size());
+        if (n > 0.0) {
+            for (const auto& r : chrono) {
+                meanW += r.weightKg;
+            }
+            meanW /= n;
+            for (const auto& r : chrono) {
+                const double predW = model->predictWeightAt(r.epochDay - model->tStart);
+                const double res = r.weightKg - predW;
+                ssRes += res * res;
+                maeSum += std::abs(res);
+                const double d = r.weightKg - meanW;
+                ssTot += d * d;
+            }
+            const double r2 = (ssTot > 1e-12) ? 1.0 - ssRes / ssTot : 0.0;
+            const double rmse = std::sqrt(ssRes / n);
+            out["prediction"]["r2"] = r2;
+            out["prediction"]["rmse"] = rmse;
+            out["prediction"]["mae"] = maeSum / n;
+        } else {
+            out["prediction"]["r2"] = 0.0;
+            out["prediction"]["rmse"] = 0.0;
+            out["prediction"]["mae"] = 0.0;
+        }
+    }
 
     Json::Value recArray(Json::arrayValue);
     for (const auto& r : recs) {
