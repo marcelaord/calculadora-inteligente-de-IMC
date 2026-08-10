@@ -48,6 +48,14 @@ function fmtDate(s) {
   return String(s || "").replace("T", " ").slice(0, 16);
 }
 
+function addDaysFmt(dateStr, days) {
+  const m = String(dateStr).match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return "";
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]) + days * 86400000);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} 00:00`;
+}
+
 // Regresion lineal de minimos cuadrados sobre una serie: devuelve los valores
 // ajustados de la recta y = m*x + b en cada punto del arreglo.
 function linearFit(ys) {
@@ -212,8 +220,9 @@ function renderChart(data) {
   const wDatasets = state.chart.data.datasets.slice();
 
   // Linea de tendencia del modelo: regresion lineal de minimos cuadrados.
+  let fit = [];
   if (weights.length >= 2) {
-    const fit = linearFit(weights);
+    fit = linearFit(weights);
     wDatasets.push({
       label: "Tendencia del modelo",
       data: fit,
@@ -228,18 +237,26 @@ function renderChart(data) {
   }
 
   if (pred && history.length) {
-    const lastW = history[history.length - 1].weightKg;
-    wLabels.push("+7 dias", "+30 dias", "+90 dias");
+    const lastDate = history[history.length - 1].date;
+    const lastFit = fit[fit.length - 1];
+    const step = (lastFit - fit[0]) / (fit.length - 1);
+    const projData = [lastFit];
+    const projLabels = [];
+    for (let d = 1; d <= 90; d++) {
+      projLabels.push(addDaysFmt(lastDate, d));
+      projData.push(lastFit + step * d);
+    }
+    wLabels.push(...projLabels);
     wDatasets.push({
       label: "Prediccion IA (kg)",
-      data: [lastW, pred.weight7d, pred.weight30d, pred.weight90d],
+      data: [...fit.slice(0, -1).map(() => null), ...projData],
       borderColor: cssVar("--accent-2") || "#6366f1",
       backgroundColor: (cssVar("--accent-2") ? `${cssVar("--accent-2")}33` : "rgba(99,102,241,.2)"),
       borderDash: [6, 4],
       fill: false,
-      tension: 0.3,
-      pointRadius: 5,
-      pointBackgroundColor: cssVar("--accent-2") || "#6366f1",
+      tension: 0,
+      pointRadius: 0,
+      borderWidth: 2,
     });
   }
   state.chart.data.labels = wLabels;
@@ -257,19 +274,31 @@ function renderChart(data) {
     pointRadius: 4,
     pointBackgroundColor: cssVar("--green") || "#34d399",
   }];
+  let bFit = [];
+  if (bmis.length >= 2) {
+    bFit = linearFit(bmis);
+  }
   if (pred && history.length) {
-    const lastBmi = history[history.length - 1].bmi;
-    bLabels.push("+30 dias", "+90 dias");
+    const lastBmiDate = history[history.length - 1].date;
+    const lastBFit = bFit[bFit.length - 1];
+    const bStep = (lastBFit - bFit[0]) / (bFit.length - 1);
+    const bProjData = [lastBFit];
+    const bProjLabels = [];
+    for (let d = 1; d <= 90; d++) {
+      bProjLabels.push(addDaysFmt(lastBmiDate, d));
+      bProjData.push(lastBFit + bStep * d);
+    }
+    bLabels.push(...bProjLabels);
     bDatasets.push({
       label: "Proyeccion IA (IMC)",
-      data: [lastBmi, pred.bmi30d, pred.bmi90d],
+      data: [...bFit.slice(0, -1).map(() => null), ...bProjData],
       borderColor: cssVar("--accent-2") || "#6366f1",
       backgroundColor: (cssVar("--accent-2") ? `${cssVar("--accent-2")}33` : "rgba(99,102,241,.2)"),
       borderDash: [6, 4],
       fill: false,
-      tension: 0.3,
-      pointRadius: 5,
-      pointBackgroundColor: cssVar("--accent-2") || "#6366f1",
+      tension: 0,
+      pointRadius: 0,
+      borderWidth: 2,
     });
   }
   state.bmiChart.data.labels = bLabels;
