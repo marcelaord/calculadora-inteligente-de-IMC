@@ -8,6 +8,7 @@ const state = {
   bmiChart: null,
   records: [],
   editingId: null,
+  chartRange: localStorage.getItem("healthiq_chart_range") || "90",
 };
 
 const $ = (id) => document.getElementById(id);
@@ -173,6 +174,15 @@ function initCharts() {
     "rgba(56,189,248,.15)");
   state.bmiChart = makeChart("bmi-chart", cssVar("--green") || "#34d399",
     "rgba(52,211,153,.15)");
+  const sel = $("chart-range");
+  if (sel) {
+    sel.value = state.chartRange;
+    sel.addEventListener("change", () => {
+      state.chartRange = sel.value;
+      localStorage.setItem("healthiq_chart_range", state.chartRange);
+      loadDashboard().catch(() => {});
+    });
+  }
 }
 
 function resetCharts() {
@@ -197,7 +207,9 @@ function renderMetrics(data) {
 }
 
 function renderChart(data) {
-  const history = (data.history || []).slice().reverse(); // ascendente por fecha
+  const all = (data.history || []).slice().reverse(); // ascendente por fecha
+  const maxN = state.chartRange === "all" ? all.length : Math.min(parseInt(state.chartRange, 10) || 90, all.length);
+  const history = all.slice(-maxN);
   const labels = history.map((h) => fmtDate(h.date));
   const weights = history.map((h) => h.weightKg);
   const bmis = history.map((h) => h.bmi);

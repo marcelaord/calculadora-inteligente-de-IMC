@@ -15,6 +15,7 @@
   --green: #34d399;
   --amber: #fbbf24;
   --red: #fb7185;
+  --grad: linear-gradient(135deg, var(--c1), var(--c2));
   --radius: 18px;
   --sidebar: 240px;
   --font-display: "Space Grotesk", system-ui, sans-serif;
@@ -38,6 +39,7 @@
   --green: #059669;
   --amber: #b45309;
   --red: #e11d48;
+  --grad: linear-gradient(135deg, var(--c1), var(--c2));
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -300,6 +302,15 @@ h1, h2, h3, h4, .metric-value, .brand-logo { font-family: var(--font-display); }
 }
 .panel:hover { border-color: var(--border-strong); }
 .panel h4 { font-size: 15px; margin-bottom: 16px; font-weight: 600; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.panel-head h4 { margin-bottom: 0; }
+.chart-range {
+  background: var(--card-solid); color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 6px 10px; font-size: 12px; font-family: var(--font-body);
+  cursor: pointer; outline: none;
+}
+.chart-range:hover { border-color: var(--border-strong); }
 .chart-wrap { position: relative; height: 290px; }
 .form-panel { max-width: 560px; }
 

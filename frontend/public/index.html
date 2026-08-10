@@ -176,7 +176,15 @@
 
           <div class="grid-2">
             <div class="panel">
-              <h4>Evolucion del peso y prediccion</h4>
+              <div class="panel-head">
+                <h4>Evolucion del peso y prediccion</h4>
+                <select id="chart-range" class="chart-range" aria-label="Cantidad de datos a mostrar">
+                  <option value="30">Ultimos 30 dias</option>
+                  <option value="60">Ultimos 60 dias</option>
+                  <option value="90" selected>Ultimos 90 dias</option>
+                  <option value="all">Todo el historial</option>
+                </select>
+              </div>
               <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
             </div>
             <div class="panel">
