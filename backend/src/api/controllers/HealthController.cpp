@@ -9,7 +9,6 @@
 #include "api/websocket/DashboardWs.h"
 #include "core/BmiCalculator.h"
 
-#include <sstream>
 #include <stdexcept>
 
 namespace healthiq::api {
@@ -25,24 +24,6 @@ Json::Value recordToJson(const core::HealthRecord& r) {
     item["note"] = r.note;
     item["createdAt"] = r.createdAt;
     return item;
-}
-
-std::string csvEscape(const std::string& value) {
-    if (value.find_first_of(",\"\n\r") == std::string::npos) {
-        return value;
-    }
-    std::string escaped;
-    escaped.reserve(value.size() + 2);
-    escaped.push_back('"');
-    for (const char c : value) {
-        if (c == '"') {
-            escaped += "\"\"";
-        } else {
-            escaped.push_back(c);
-        }
-    }
-    escaped.push_back('"');
-    return escaped;
 }
 
 }  // namespace
@@ -268,37 +249,6 @@ drogon::Task<void> HealthController::deleteRecord(
         callback(ok(out));
     } catch (const std::exception& e) {
         LOG_ERROR << "deleteRecord: " << e.what();
-        callback(serverError());
-    }
-}
-
-drogon::Task<void> HealthController::exportRecords(
-    drogon::HttpRequestPtr req,
-    std::function<void(const drogon::HttpResponsePtr&)> callback) {
-    try {
-        const auto userId = req->getAttributes()->get<int64_t>("userId");
-        const auto repo = AppServices::instance().records();
-        const auto records = co_await repo.listByUser(userId, 100000);
-
-        std::ostringstream csv;
-        csv << "fecha,peso_kg,altura_cm,imc,actividad,nota\n";
-        for (const auto& r : records) {
-            csv << r.createdAt << ','
-                << r.weightKg << ','
-                << r.heightCm << ','
-                << r.bmi << ','
-                << r.activityLevel << ','
-                << csvEscape(r.note) << '\n';
-        }
-
-        auto resp = drogon::HttpResponse::newHttpResponse();
-        resp->setBody(csv.str());
-        resp->setContentTypeString("text/csv; charset=utf-8");
-        resp->addHeader("Content-Disposition",
-                        "attachment; filename=\"healthiq_records.csv\"");
-        callback(resp);
-    } catch (const std::exception& e) {
-        LOG_ERROR << "exportRecords: " << e.what();
         callback(serverError());
     }
 }

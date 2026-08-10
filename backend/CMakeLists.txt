@@ -59,6 +59,8 @@ add_executable(healthiq-backend
     src/api/controllers/AiController.h
     src/api/controllers/DashboardController.cpp
     src/api/controllers/DashboardController.h
+    src/api/controllers/DevController.cpp
+    src/api/controllers/DevController.h
     src/api/websocket/DashboardWs.cpp
     src/api/websocket/DashboardWs.h
 )

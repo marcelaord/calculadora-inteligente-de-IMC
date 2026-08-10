@@ -18,8 +18,6 @@ public:
                   drogon::Put, "JwtAuthFilter");
     ADD_METHOD_TO(HealthController::deleteRecord, "/api/v1/records/{1}",
                   drogon::Delete, "JwtAuthFilter");
-    ADD_METHOD_TO(HealthController::exportRecords, "/api/v1/records/export",
-                  drogon::Get, "JwtAuthFilter");
     METHOD_LIST_END
 
     drogon::Task<void> addRecord(drogon::HttpRequestPtr req,
@@ -36,9 +34,6 @@ public:
         drogon::HttpRequestPtr req,
         std::function<void(const drogon::HttpResponsePtr&)> callback,
         const int64_t& recordId);
-    drogon::Task<void> exportRecords(
-        drogon::HttpRequestPtr req,
-        std::function<void(const drogon::HttpResponsePtr&)> callback);
 };
 
 }  // namespace healthiq::api
