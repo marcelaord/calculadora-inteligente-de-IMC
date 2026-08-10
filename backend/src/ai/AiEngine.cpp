@@ -63,6 +63,91 @@ drogon::Task<Json::Value> AiEngine::analyze(int64_t userId) {
     out["prediction"]["sampleCount"] = model->sampleCount;
     out["prediction"]["modelType"] = "Regresion lineal (minimos cuadrados)";
 
+    // Clasificacion de tendencia y objetivo saludable.
+    {
+        const double slope = pred.slope;
+        std::string trend = "estable";
+        if (std::abs(slope) >= 0.01) {
+            trend = (slope < 0) ? "descendente" : "ascendente";
+        }
+
+        const auto cat = core::BmiCalculator::classify(latest->bmi);
+        std::string signal;
+        if (cat == core::BmiCategory::Normal) {
+            signal = (std::abs(slope) < 0.01) ? "favorable"
+                                              : "estable";
+        } else if (cat == core::BmiCategory::Underweight) {
+            signal = (slope > 0.01)   ? "favorable"
+                     : (slope < -0.01) ? "desfavorable"
+                                       : "estable";
+        } else {  // Sobrepeso / Obesidad
+            signal = (slope < -0.01)  ? "favorable"
+                     : (slope > 0.01) ? "desfavorable"
+                                      : "estable";
+        }
+
+        // Limite del rango saludable (IMC 18.5 - 24.9) al que apuntar.
+        double healthyTargetKg = 0.0;
+        if (latest->heightCm > 0.0) {
+            const double h2 = std::pow(latest->heightCm / 100.0, 2.0);
+            healthyTargetKg =
+                (cat == core::BmiCategory::Underweight) ? 18.5 * h2 : 24.9 * h2;
+        }
+
+        double daysToHealthy = -1.0;
+        if (healthyTargetKg > 0.0 && std::abs(slope) > 1e-9) {
+            const double delta = latest->weightKg - healthyTargetKg;
+            const bool converges =
+                (delta > 0.0 && slope < 0.0) || (delta < 0.0 && slope > 0.0);
+            if (converges) {
+                daysToHealthy = std::abs(delta / slope);
+            }
+        }
+
+        char buf[192];
+        std::string insight;
+        if (std::abs(slope) < 0.01) {
+            std::snprintf(buf, sizeof(buf),
+                          "Tu IMC (%.1f) se ha mantenido estable en los ultimos "
+                          "registros. El modelo estima que la tendencia se mantendra "
+                          "en el corto plazo.",
+                          latest->bmi);
+            insight = buf;
+        } else if (trend == "descendente") {
+            if (daysToHealthy >= 0.0 && daysToHealthy <= 730.0) {
+                std::snprintf(buf, sizeof(buf),
+                              "Tu IMC (%.1f) presenta una tendencia descendente. "
+                              "Si el comportamiento observado se mantiene, el modelo "
+                              "estima que podrias acercarte al rango saludable en "
+                              "unos %.0f dias (~%d meses).",
+                              latest->bmi, daysToHealthy,
+                              static_cast<int>(std::round(daysToHealthy / 30.0)));
+            } else {
+                std::snprintf(buf, sizeof(buf),
+                              "Tu IMC (%.1f) presenta una tendencia descendente en "
+                              "los ultimos registros. Si el comportamiento se "
+                              "mantiene, el modelo estima que el descenso continuara.",
+                              latest->bmi);
+            }
+            insight = buf;
+        } else {
+            std::snprintf(buf, sizeof(buf),
+                          "Tu IMC (%.1f) presenta una tendencia ascendente en los "
+                          "ultimos registros. Conviene revisar tus habitos para "
+                          "evitar que el aumento se consolide.",
+                          latest->bmi);
+            insight = buf;
+        }
+
+        out["trend"] = trend;
+        out["signal"] = signal;
+        out["insight"] = insight;
+        out["prediction"]["healthyTargetKg"] = healthyTargetKg;
+        out["prediction"]["daysToHealthy"] =
+            (daysToHealthy >= 0.0) ? static_cast<int>(std::round(daysToHealthy))
+                                   : -1;
+    }
+
     // Metricas de precision sobre todo el historial: R^2, RMSE y MAE.
     {
         const auto chrono = co_await records_.listChronological(userId);

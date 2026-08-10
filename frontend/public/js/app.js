@@ -202,7 +202,9 @@ function renderMetrics(data) {
   $("m-trend").textContent = (pred.trendKgPerMonth ?? 0) > 0
     ? `+${fmt(pred.trendKgPerMonth)}`
     : fmt(pred.trendKgPerMonth);
-  $("m-trend-sub").textContent = `kg/mes · confianza ${pred.confidence || "baja"}`;
+  const trendTxt = a.trend === "ascendente" ? "subiendo"
+    : a.trend === "descendente" ? "bajando" : "estable";
+  $("m-trend-sub").textContent = `kg/mes · ${trendTxt} · confianza ${pred.confidence || "baja"}`;
   $("m-bmi30").textContent = fmt(pred.bmi30d);
 }
 
@@ -254,9 +256,14 @@ function renderChart(data) {
     const step = (lastFit - fit[0]) / (fit.length - 1);
     const projData = [lastFit];
     const projLabels = [];
+    const goalW = data.goal && data.goal.goalWeightKg > 0 ? data.goal.goalWeightKg : null;
     for (let d = 1; d <= 90; d++) {
       projLabels.push(addDaysFmt(lastDate, d));
-      projData.push(lastFit + step * d);
+      let w = lastFit + step * d;
+      if (goalW != null) {
+        w = step > 0 ? Math.min(w, goalW) : Math.max(w, goalW);
+      }
+      projData.push(w);
     }
     wLabels.push(...projLabels);
     wDatasets.push({
@@ -294,11 +301,19 @@ function renderChart(data) {
     const lastBmiDate = history[history.length - 1].date;
     const lastBFit = bFit[bFit.length - 1];
     const bStep = (lastBFit - bFit[0]) / (bFit.length - 1);
+    const lastRec = history[history.length - 1];
+    const h2 = lastRec.bmi > 0 ? lastRec.weightKg / lastRec.bmi : 0;
+    const goalW = data.goal && data.goal.goalWeightKg > 0 ? data.goal.goalWeightKg : null;
+    const goalBmi = goalW != null && h2 > 0 ? goalW / h2 : null;
     const bProjData = [lastBFit];
     const bProjLabels = [];
     for (let d = 1; d <= 90; d++) {
       bProjLabels.push(addDaysFmt(lastBmiDate, d));
-      bProjData.push(lastBFit + bStep * d);
+      let w = lastBFit + bStep * d;
+      if (goalBmi != null) {
+        w = bStep > 0 ? Math.min(w, goalBmi) : Math.max(w, goalBmi);
+      }
+      bProjData.push(w);
     }
     bLabels.push(...bProjLabels);
     bDatasets.push({
@@ -382,6 +397,14 @@ function renderModelInfo(data) {
   }
   const conf = pred.confidence || "baja";
   const confIcon = conf === "alta" ? "✓" : conf === "media" ? "◐" : "○";
+  const signal = a.signal || "";
+  const signalMap = {
+    favorable: ["Tendencia favorable", "s-ok"],
+    estable: ["Tendencia estable", "s-warn"],
+    desfavorable: ["Tendencia desfavorable", "s-bad"],
+  };
+  const [sigTxt, sigCls] = signalMap[signal] || ["Sin senal", ""];
+  const trendTxt = a.trend === "ascendente" ? "ascendente" : a.trend === "descendente" ? "descendente" : "estable";
   box.innerHTML = `
     <div class="stat"><span>Algoritmo</span><span>${pred.modelType || "Regresion lineal"}</span></div>
     <div class="stat"><span>Registros aprendidos</span><span>${stats.recordCount}</span></div>
@@ -389,8 +412,12 @@ function renderModelInfo(data) {
     <div class="stat"><span>Error medio (RMSE)</span><span>${fmt(pred.rmse, 2)} kg</span></div>
     <div class="stat"><span>Desviacion media (MAE)</span><span>${fmt(pred.mae, 2)} kg</span></div>
     <div class="stat"><span>Pendiente del modelo</span><span>${fmt(pred.slope, 3)} kg/dia</span></div>
+    <div class="stat"><span>Tendencia detectada</span><span>${trendTxt}</span></div>
     <div class="stat"><span>Confianza de prediccion</span><span>${confIcon} ${conf}</span></div>
-    <div class="stat"><span>IMC en 90 dias</span><span>${fmt(pred.bmi90d)}</span></div>`;
+    <div class="stat"><span>IMC en 90 dias</span><span>${fmt(pred.bmi90d)}</span></div>
+    ${pred.daysToHealthy > 0 ? `<div class="stat"><span>Estimacion al rango saludable</span><span>~${pred.daysToHealthy} dias</span></div>` : ""}
+    <div class="signal ${sigCls}"><span>${sigTxt}</span></div>
+    ${a.insight ? `<p class="insight">${escapeHtml(a.insight)}</p>` : ""}`;
 }
 
 async function loadDashboard() {

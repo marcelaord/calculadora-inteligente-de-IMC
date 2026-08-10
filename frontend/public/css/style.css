@@ -403,6 +403,19 @@ h1, h2, h3, h4, .metric-value, .brand-logo { font-family: var(--font-display); }
   border-radius: 11px; font-size: 14px;
 }
 .model-info .stat span:last-child { font-weight: 700; background: var(--grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.signal {
+  margin-top: 12px; padding: 12px 14px; border-radius: 11px;
+  font-size: 13px; font-weight: 700; text-align: center;
+  border: 1px solid var(--border); font-family: var(--font-display);
+}
+.signal.s-ok { background: rgba(52,211,153,.12); color: var(--green); border-color: rgba(52,211,153,.3); }
+.signal.s-warn { background: rgba(251,191,36,.12); color: var(--amber); border-color: rgba(251,191,36,.3); }
+.signal.s-bad { background: rgba(251,113,133,.12); color: var(--red); border-color: rgba(251,113,133,.3); }
+.insight {
+  margin-top: 12px; color: var(--muted); font-size: 13px; line-height: 1.6;
+  padding: 12px 14px; background: var(--card-solid); border: 1px solid var(--border);
+  border-radius: 11px;
+}
 
 /* ---------- Modal ---------- */
 .modal {
