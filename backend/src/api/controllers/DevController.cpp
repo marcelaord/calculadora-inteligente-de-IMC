@@ -14,6 +14,7 @@
 #include <ctime>
 #include <random>
 #include <string>
+#include <vector>
 
 namespace healthiq::api {
 
@@ -100,11 +101,58 @@ drogon::Task<void> DevController::fillHistory(
                                    now.time_since_epoch())
                                    .count();
 
+        // Variabilidad realista (escala 0-2, default 1): oscilacion semanal,
+        // mesetas, retrocesos temporales y picos ocasionales que hacen que el
+        // historial no sea una recta perfecta.
+        const double variation =
+            std::max(0.0, (*body).get("variation", 1.0).asDouble());
+
+        // Fases por bloques: cada 7-14 dias se decide si el peso se estanca
+        // (meseta), retrocede levemente o sigue la tendencia normal. El desvio
+        // se aplica opuesto a la pendiente para simular estancamiento real.
+        std::vector<double> phaseBias(days, 0.0);
+        {
+            int idx = 0;
+            std::uniform_int_distribution<int> lenDist(7, 14);
+            std::uniform_int_distribution<int> kindDist(0, 9);
+            std::normal_distribution<double> biasNoise(0.0, 0.5);
+            while (idx < days) {
+                const int len = std::min(lenDist(rng), days - idx);
+                const int kind = kindDist(rng);
+                double bias = 0.0;
+                if (kind >= 7) {
+                    // Meseta: el peso se detiene (desvio opuesto a la pendiente).
+                    bias = deltaPerDay != 0.0
+                               ? -deltaPerDay * 8.0 * variation
+                               : 0.0;
+                } else if (kind >= 4) {
+                    // Pequena oscilacion de fondo.
+                    bias = biasNoise(rng) * 0.6 * variation;
+                }
+                for (int k = 0; k < len; ++k) {
+                    phaseBias[idx + k] = bias;
+                }
+                idx += len;
+            }
+        }
+
         for (int i = 0; i < days; ++i) {
             const int daysAgo = days - 1 - i;
+
+            // Oscilacion semanal (fin de semana suele pesar mas).
+            const double weekly =
+                ((daysAgo % 7) < 2) ? 0.35 * variation : 0.0;
+
+            // Pico ocasional (viaje, celebracion, enfermedad).
+            double spike = 0.0;
+            if (rng() % 100 < 6) {
+                const double amp = 0.4 + static_cast<double>(rng() % 100) / 100.0;
+                spike = (rng() % 2 == 0) ? amp * variation : -amp * variation;
+            }
+
             const double weight =
                 baseWeight + deltaPerDay * static_cast<double>(daysAgo) +
-                noise(rng);
+                phaseBias[i] + weekly + spike + noise(rng);
             const auto bmi =
                 core::BmiCalculator::calculate(weight, heightCm);
             const int64_t createdAt = nowSec - static_cast<int64_t>(daysAgo) * 86400;
